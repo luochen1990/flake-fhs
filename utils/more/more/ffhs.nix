@@ -39,9 +39,6 @@ rec {
       inherit (basicUtils)
         unionFor
         dict
-        ;
-
-      inherit (basicUtils)
         for
         concatMap
         ;
@@ -54,14 +51,14 @@ rec {
             inherit system;
             config = nixpkgsConfig;
           });
-        tools = utilsSystem.prepareUtils (../../.. + "/utils").more { inherit lib; }.more { inherit pkgs; };
+        utils = utils.more { inherit pkgs; };
         specialArgs = {
           self = selfArg;
           inherit
             system
             pkgs
             inputs
-            tools
+            utils
             roots
             ;
         };
