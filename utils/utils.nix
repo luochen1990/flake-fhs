@@ -47,7 +47,7 @@ in
     // {
       # more() method to access Level 2 and Level 3 - CUMULATIVE DESIGN
       more =
-        libArgs:
+        { lib }:
         let
           # Level 2: lib-dependent modules (flatten them like useLib in original)
           # Start with level1 to ensure accumulation
@@ -56,7 +56,7 @@ in
               unionFor (findFiles (hasPostfix "nix") morePath) (
                 fname:
                 let
-                  result = import fname libArgs;
+                  result = import fname { inherit lib; };
                 in
                 if builtins.isAttrs result then
                   result
@@ -65,8 +65,6 @@ in
               )
             else
               { };
-
-          # Check if more/more directory exists
           moreMorePath = morePath + "/more";
         in
         level1
@@ -74,10 +72,9 @@ in
         // {
           # more() method to access Level 3 - also CUMULATIVE
           more =
-            pkgsArgs:
+            { pkgs }:
             if builtins.pathExists moreMorePath then
               let
-                allArgs = libArgs // pkgsArgs;
                 # Import Level 3 modules without flattening - keep filename as key
                 importLevel3 =
                   path:
@@ -85,7 +82,7 @@ in
                     basename = builtins.replaceStrings [ ".nix" ] [ "" ] (builtins.baseNameOf path);
                   in
                   {
-                    "${basename}" = import path allArgs;
+                    "${basename}" = import path { inherit lib pkgs; };
                   };
               in
               unionFor (findFiles (hasPostfix "nix") moreMorePath) importLevel3
