@@ -6,27 +6,36 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = inputs@{ self, nixpkgs, flake-utils, ... }:
+  outputs =
+    inputs@{
+      self,
+      nixpkgs,
+      flake-utils,
+      ...
+    }:
     let
-      # Import mkFlake directly from fhs.fun.nix
-      mkFlakeModule = import ./utils/fhs.fun.nix {
-        lib = nixpkgs.lib;
-        inherit nixpkgs;
-        inherit inputs;
-      };
+      # Get mkFlake function from Level 3 utils
+      mkFlake =
+        ((import ./utils/utils.nix).prepareUtils ./utils.more { lib = nixpkgs.lib; }.more {
+          pkgs = nixpkgs;
+        }).mkFlake;
     in
-    (mkFlakeModule.mkFlake {
+    (mkFlake {
       root = [ ./. ];
       inherit (inputs) self;
       lib = nixpkgs.lib;
       nixpkgs = nixpkgs;
       inherit inputs;
-    }) // {
+    })
+    // {
       # Export mkFlake function for external use
-      mkFlake = args: mkFlakeModule.mkFlake (args // {
-        lib = args.lib or nixpkgs.lib;
-        nixpkgs = args.nixpkgs or nixpkgs;
-        inputs = args.inputs or inputs;
-      });
+      mkFlake =
+        args:
+        mkFlake (
+          args
+          // {
+            inputs = args.inputs or inputs;
+          }
+        );
     };
 }

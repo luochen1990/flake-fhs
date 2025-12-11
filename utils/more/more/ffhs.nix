@@ -1,51 +1,14 @@
 # Flake FHS core implementation
 # mkFlake function that auto-generates flake outputs from directory structure
 
-{
-  lib,
-  nixpkgs,
-  inputs ? {}
-}:
+{ lib, pkgs }:
 
 let
-  # Built-in utils loading logic based on directory hierarchy
-  # Level 1: utils/ - builtins only
-  basicUtils = {
-    dict = import ./dict.nix;
-    list = import ./list.nix;
-  };
+  # Import utils preparation system
+  utilsSystem = import ../../utils.nix;
 
-  # Level 2: utils/more/ - lib dependent
-  libUtils = lib: {
-    file = import ./more/file.nix;
-  };
-
-  # Level 3: utils/more/more/ - lib and pkgs dependent (reserved for future)
-  pkgsUtils = lib: pkgs: {
-    # Future pkgs-dependent utilities can go here
-  };
-
-  # Merge all utils with proper dependency injection
-  useLib = lib: (libUtils lib) // {
-    usePkgs = pkgs: (pkgsUtils lib pkgs);
-  };
-
-  allUtils = basicUtils // {
-    inherit useLib;
-  };
-
-  # System context helper with lib parameter for file operations
-  getFileUtils = lib: let
-    fileModule = import ./more/file.nix;
-  in {
-    inherit (fileModule)
-      findFilesRec
-      hasPostfix
-      subDirsRec
-      isNotHidden
-      lsDirs
-      lsFiles;
-  };
+  # Import basic utils that don't require external dependencies
+  basicUtils = utilsSystem.prepareUtils ../../...;
 
   inherit (basicUtils.dict)
     unionFor
@@ -64,8 +27,9 @@ let
       inherit system;
       config.allowUnfree = true;
     };
-    fileUtils = getFileUtils pkgs.lib;
-    tools = allUtils // (allUtils.useLib pkgs.lib) // fileUtils;
+    tools = utilsSystem.prepareUtils ../../..
+           .more { inherit lib; }
+           .more { inherit pkgs; };
     specialArgs = {
       self = selfArg;
       inherit
@@ -73,7 +37,6 @@ let
         pkgs
         inputs
         tools
-        fileUtils
         ;
     };
   };
@@ -105,6 +68,7 @@ rec {
       roots = args.root or [ ./. ];
       supportedSystems = args.supportedSystems or (lib.systems.flakeExposed or [ "x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin" ]);
       nixpkgsConfig = args.nixpkgsConfig or { allowUnfree = true; };
+      inputs = args.inputs or {};
 
       # Override systemContext with custom config
       systemContext' = selfArg: system: rec {
@@ -113,8 +77,9 @@ rec {
           inherit system;
           config = nixpkgsConfig;
         };
-        fileUtils = getFileUtils pkgs.lib;
-        tools = allUtils // (allUtils.useLib pkgs.lib) // fileUtils;
+        tools = utilsSystem.prepareUtils ../../..
+           .more { inherit lib; }
+           .more { inherit pkgs; };
         specialArgs = {
           self = selfArg;
           inherit
@@ -122,7 +87,6 @@ rec {
             pkgs
             inputs
             tools
-            fileUtils
             roots
             ;
         };
@@ -134,7 +98,8 @@ rec {
       # Updated component discovery that respects multiple roots
       discoverComponents' = componentType:
         let
-          fileUtils = getFileUtils lib;
+          fileUtils = (utilsSystem.prepareUtils ../../..
+               .more { inherit lib; }).file;
           # Collect components from all roots as a flat list
           allComponents =
             concatMap (root:
@@ -196,12 +161,12 @@ rec {
         let
           components = discoverComponents' "shells";
         in
-        unionFor components (
-          { name, path, ... }:
-          {
-            "${name}" = import path context;
-          }
-        )
+        let
+            componentList = components;
+          in
+          builtins.foldl' (acc: comp: acc // {
+            "${comp.name}" = import comp.path context;
+          }) {} componentList
       );
 
       apps = eachSystem (
@@ -209,24 +174,24 @@ rec {
         let
           components = discoverComponents' "apps";
         in
-        unionFor components (
-          { name, path, ... }:
-          {
-            "${name}" = import path context;
-          }
-        )
+        let
+            componentList = components;
+          in
+          builtins.foldl' (acc: comp: acc // {
+            "${comp.name}" = import comp.path context;
+          }) {} componentList
       );
 
       nixosModules =
         let
           components = discoverComponents' "modules";
         in
-        unionFor components (
-          { name, path, ... }:
-          {
-            "${name}" = import path;
-          }
-        )
+        let
+            componentList = components;
+          in
+          builtins.foldl' (acc: comp: acc // {
+            "${comp.name}" = import comp.path;
+          }) {} componentList
         // {
           default =
             let
@@ -242,63 +207,68 @@ rec {
         let
           components = discoverComponents' "profiles";
           context = systemContext' args.self "x86_64-linux";
-          modulesList = unionFor (discoverComponents' "modules") (
-            { name, path, ... }:
-            import path
-          );
+          modulesList = let
+            moduleComponents = discoverComponents' "modules";
+          in
+          builtins.foldl' (acc: comp: acc ++ [import comp.path]) [] moduleComponents;
         in
-        unionFor components (
-          { name, path, ... }:
-          {
-            "${name}" = nixpkgs.lib.nixosSystem {
+        let
+            profileList = components;
+          in
+          builtins.foldl' (acc: comp: acc // {
+            "${comp.name}" = nixpkgs.lib.nixosSystem {
               system = "x86_64-linux";
-              specialArgs = context.specialArgs // { inherit name; };
-              modules = [ (path + "/configuration.nix") ] ++ modulesList;
+              specialArgs = context.specialArgs // { name = comp.name; };
+              modules = [ (comp.path + "/configuration.nix") ] ++ modulesList;
             };
-          }
-        );
+          }) {} profileList;
 
       checks = eachSystem (
         context:
         let
           components = discoverComponents' "checks";
         in
-        unionFor components (
-          { name, path, ... }:
-          {
-            "${name}" = import path context;
-          }
-        )
+        let
+            componentList = components;
+          in
+          builtins.foldl' (acc: comp: acc // {
+            "${comp.name}" = import comp.path context;
+          }) {} componentList
       );
 
       lib =
         let
           context = systemContext' args.self "x86_64-linux";
+          # Filter out system utils directory to avoid conflicts
+          userUtilsComponents = builtins.filter (comp: comp.name != "utils") (discoverComponents' "utils");
         in
-        unionFor (discoverComponents' "utils") (
-          { name, path, ... }:
-          {
-            "${name}" = import path context;
-          }
-        );
+        builtins.foldl' (acc: comp: acc // {
+          "${comp.name}" = import comp.path context;
+        }) {} userUtilsComponents;
 
-      templates =
-        unionFor (discoverComponents' "templates") (
-          { name, path, ... }:
-          {
-            "${name}" = {
-              path = path;
-              description = "Template: ${name}";
-            };
-          }
-        );
+      templates = {
+        simple-project = {
+          path = ./templates/simple-project;
+          description = "Simple project using Flake FHS";
+        };
+        package-module = {
+          path = ./templates/package-module;
+          description = "NixOS module package using Flake FHS";
+        };
+        full-featured = {
+          path = ./templates/full-featured;
+          description = "Full-featured project using Flake FHS";
+        };
+      };
 
       # Auto-generated overlay for packages
       overlays.default = final: prev:
         let
-          fileUtils = getFileUtils final.lib;
-          tools = allUtils // (allUtils.useLib final.lib) // fileUtils;
-          context = { pkgs = final; inherit (final) lib; inherit tools; };
+          utilsSystem = import ../../utils.nix;
+          overlayUtils = utilsSystem.prepareUtils ../../..
+                       .more { lib = final.lib; }
+                       .more { pkgs = final; };
+          context = { pkgs = final; inherit (final) lib; tools = overlayUtils; };
         in
         buildPackages' context;
 
