@@ -1,5 +1,5 @@
 {
-  description = "Full-featured project using Flake FHS";
+  description = "Full-featured project with modules and profiles using Flake FHS";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
