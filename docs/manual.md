@@ -547,60 +547,28 @@ nix eval .#lib.utils.strings.camelCase --apply 'f: f "hello-world"'
 
 ## ✅ checks/ - 检查和测试
 
-`checks/` 目录定义持续集成检查、测试和质量保证，支持文件模式和目录模式的混合组织结构。
-
-### 目录结构设计
-
-`checks/` 目录支持两种模式：
-
-1. **文件模式**: 顶层 `.nix` 文件直接对应检查项
-2. **目录模式**: 支持命名空间和深层嵌套，包含 `default.nix` 的子目录成为检查项
+`checks/` 目录支持文件模式和目录模式的混合结构：
 
 ```
 checks/
-├── # 文件模式：顶层 .nix 文件
 ├── lint.nix                           → checks.<system>.lint
-├── build-test.nix                     → checks.<system>.build-test
-│
-├── # 目录模式：命名空间组织
-├── unit/                              # 命名空间（不生成检查）
-│   ├── string-utils/                  # checkdir
-│   │   └── default.nix                → checks.<system>.unit-string-utils
-│   └── array-operations/              # checkdir
-│       └── default.nix                → checks.<system>.unit-array-operations
-│
-├── integration/                       # 命名空间
-│   ├── ui/                           # 命名空间
-│   │   └── component-tests/          # checkdir
-│   │       └── default.nix            → checks.<system>.integration-ui-component-tests
-│   └── backend/                      # 命名空间
-│       └── api-tests/                # checkdir
-│           └── default.nix            → checks.<system>.integration-backend-api-tests
-│
-└── performance/                       # 命名空间
-    ├── load-test/                    # checkdir
-    │   └── default.nix                → checks.<system>.performance-load-test
-    └── memory-usage/                 # checkdir
-        └── default.nix                → checks.<system>.performance-memory-usage
+├── unit/                              # 命名空间
+│   └── string-utils/                  # checkdir
+│       └── default.nix                → checks.<system>.unit-string-utils
+└── integration/                       # 命名空间
+    └── api-tests/                    # checkdir
+        └── default.nix                → checks.<system>.integration-api-tests
 ```
 
-### 设计原则
-
-#### 文件模式 vs 目录模式
+### 设计规则
 
 - **文件模式**: 顶层 `.nix` 文件（`default.nix` 除外）
-- **目录模式**: 递归查找所有包含 `default.nix` 的子目录
-- **命名空间**: 不包含 `default.nix` 的目录作为命名空间，用于组织
-
-#### 命名规则
-
-- **文件模式**: 文件名去掉 `.nix` 后缀 → `lint.nix` → `lint`
-- **目录模式**: 路径中的 `/` 转换为 `-` → `unit/string-utils` → `unit-string-utils`
+- **目录模式**: 递归查找包含 `default.nix` 的子目录
+- **命名空间**: 不包含 `default.nix` 的目录用于组织
+- **命名规则**: 路径 `/` 转换为 `-` → `unit/string-utils` → `unit-string-utils`
 - **优先级**: 文件优先于目录，避免名称冲突
 
 ### 检查定义示例
-
-#### 文件模式示例
 
 `checks/lint.nix`:
 ```nix
@@ -609,25 +577,8 @@ checks/
 pkgs.runCommand "lint-check" {
   nativeBuildInputs = [ pkgs.nixfmt-rfc-style ];
 } ''
-  echo "🔍 Running Nix formatting checks..."
+  echo "🔍 Running checks..."
   find . -name "*.nix" -exec nixfmt {} \;
-  echo "✅ All files properly formatted" > $out
-  touch $out
-''
-```
-
-#### 目录模式示例
-
-`checks/unit/string-utils/default.nix`:
-```nix
-{ pkgs, lib, ... }:
-
-pkgs.runCommand "string-utils-tests" {
-  buildInputs = with pkgs; [ python3 ];
-} ''
-  echo "🧪 Running string utilities unit tests..."
-  python3 -m pytest tests/string_utils/
-  echo "✅ String utilities tests passed" > $out
   touch $out
 ''
 ```
@@ -641,29 +592,14 @@ nix flake check
 # 运行特定检查
 nix flake check .#lint
 nix flake check .#unit-string-utils
-nix flake check .#integration-ui-component-tests
 
-# 构建单个检查（用于调试）
-nix build .#checks.x86_64-linux.unit-string-utils
-
-# 查看所有可用检查
+# 查看所有检查
 nix flake show
 ```
 
-### 组织最佳实践
-
-1. **逻辑分组**: 使用命名空间按功能、类型或层次组织检查
-2. **命名约定**: 使用描述性名称，避免冲突
-3. **深层嵌套**: 支持任意深度的嵌套结构
-4. **混合使用**: 文件和目录模式可以并存使用
-
 ### 优先级处理
 
-当同时存在 `checks/test.nix` 和 `checks/test/default.nix` 时：
-- ✅ `test` 优先使用文件模式（`checks/test.nix`）
-- ❌ 目录模式（`checks/test/default.nix`）被忽略
-
-这种设计确保了清晰、无歧义的检查命名和组织。
+同时存在 `checks/test.nix` 和 `checks/test/default.nix` 时，文件模式优先。
 
 ## 🔄 overlays/ - 包覆盖
 
