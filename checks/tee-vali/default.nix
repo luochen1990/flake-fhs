@@ -23,7 +23,7 @@ pkgs.runCommand "templates-validation" {
 
   # Run Python validator with local path to copied flake-fhs
   python3 ${./validators.py} \
-    --templates-dir ${../templates} \
+    --templates-dir "$FLAKE_FHS_COPY/templates" \
     --project-root "$FLAKE_FHS_COPY" \
     --format text
 
