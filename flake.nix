@@ -4,9 +4,11 @@
   outputs =
     { self, nixpkgs, ... }:
     let
-      utils = (((import ./utils/utils.nix).prepareUtils ./utils).more { lib = nixpkgs.lib; }).more {
-        pkgs = nixpkgs;
-      };
+
+      lib = nixpkgs.lib;
+      utils' = lib // (import ./utils/list.nix {}) // (import ./utils/dict.nix {}) // (import ./utils/file.nix {});
+      inherit (import ./utils/prepare-lib.nix utils') prepareLib;
+      utils = prepareLib { roots = [ ./. ]; lib = lib; };
     in
     utils.mkFlake {
       roots = [ ./. ];

@@ -1,8 +1,7 @@
 # NFHS core implementation
 # mkFlake function that auto-generates flake outputs from directory structure
 
-{ lib }: # 这里的 lib 是 FlakeFHS 项目的 lib
-
+lib:
 let
   inherit (builtins)
     pathExists
@@ -10,15 +9,17 @@ let
     isAttrs
     concatStringsSep
     head
+    concatLists
     ;
+
   inherit (lib)
-    prepare
+    prepareLib
     unionFor
     union
     dict
     for
     forFilter
-    concat
+    #concat #NOTE: this is 2-nary . e.g. concat a b
     concatFor
     lsDirs
     lsFiles
@@ -51,14 +52,14 @@ let
     let
       unguardedConfigPaths = concatFor paths (
         path:
-        (concat (
+        (concatLists (
           subDirsRec path (it: rec {
             options-dot-nix = it.path + "/options.nix";
             guarded = pathExists options-dot-nix;
             into = !guarded;
             pick = !guarded;
             out = forFilter (lsFiles it.path) (
-              fname: if hasPostfix "nix" fname then (it.path + "/" + fname) else null
+              fname: if hasPostfix "nix" fname then (it.path + "/${fname}") else null
             );
           })
         ))
@@ -83,7 +84,7 @@ let
       );
 
       # TODO: 这里需要对 breadcrumbs 进行去重，暂时先假设没有重复的情况
-      children = for guardedSubdirs mkGuardedTreeNode;
+      children = for guardedSubdirs (subdir: mkGuardedTreeNode subdir);
     in
     {
       inherit
@@ -136,10 +137,9 @@ rec {
               config = nixpkgsConfig;
             }
           );
-          lib = prepare {
-            utilsPath = head (for roots (root: root + "/utils")); # TODO: 支持多 root
+          lib = prepareLib {
+            inherit roots pkgs;
             lib = mkFlakeArgs.lib;
-            pkgs = pkgs;
           };
           specialArgs = {
             inherit
@@ -175,26 +175,15 @@ rec {
 
       moduleSets =
         let
-          guardedTree = mkGuardedTreeNode {
-            paths = roots;
+          moduleTree = mkGuardedTreeNode {
+            paths = for roots (root: root + "/modules");
             breadcrumbs = [ ];
             optionsModule = { };
           };
         in
         {
-          guardedToplevelModules = guardedTree.children;
-
-          # unguardedToplevelModules : [ Path ]
-          unguardedToplevelModules = discover roots (it: rec {
-            options-dot-nix = it.path + "/options.nix";
-            guarded = pathExists options-dot-nix;
-            into = (it.depth == 0 && it.name == "modules") || (it.depth >= 1 && !guarded);
-            pick = it.depth >= 1 && !guarded;
-            out = {
-              name = concatStringsSep "." it.breadcrumbs;
-              value = it.path;
-            };
-          });
+          guardedToplevelModules = moduleTree.children;
+          unguardedConfigPaths = moduleTree.unguardedConfigPaths;
         };
 
     in
@@ -253,7 +242,11 @@ rec {
             );
           }
         ])
-      );
+        ) // {
+          default = {
+            imports = moduleSets.unguardedConfigPaths;
+          };
+        };
 
       nixosConfigurations =
         let
@@ -369,21 +362,10 @@ rec {
         )
       );
 
-      lib = eachSystem (
-        context:
-        listToAttrs (
-          discover roots (it: rec {
-            default-dot-nix = it.path + "/default.nix";
-            into = it.depth == 0 && it.name == "utils";
-            pick = it.depth >= 1 && pathExists default-dot-nix;
-            out = {
-              name = it.name;
-              #value = context.pkgs.callPackage default-dot-nix { };
-              value = import default-dot-nix context;
-            };
-          })
-        )
-      );
+      lib = prepareLib {
+        inherit roots lib;
+        #lib = mkFlakeArgs.lib;
+      };
 
       templates =
         let
@@ -414,21 +396,9 @@ rec {
               [ ];
 
           allTemplateLists = map readTemplatesFromRoot roots;
-          allTemplates = concat allTemplateLists;
+          allTemplates = concatLists allTemplateLists;
         in
         builtins.listToAttrs allTemplates;
-
-      # Auto-generated overlay for packages
-      overlays.default =
-        final: prev:
-        let
-          context = {
-            pkgs = final;
-            utils = prepareUtils { pkgs = final; };
-            inherit (final) lib;
-          };
-        in
-        buildPackages context;
 
       # Formatter
       formatter = eachSystem ({ pkgs, ... }: pkgs.nixfmt-tree);

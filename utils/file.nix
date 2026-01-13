@@ -1,4 +1,5 @@
 # the tool functions which is frequently used but not contained in nixpkgs.lib
+lib:
 let
   inherit (builtins)
     filter
@@ -19,6 +20,16 @@ rec {
 
   # isNotHidden : Path -> Bool
   isNotHidden = (path: match "\\..*" path == null);
+
+  # isNonEmptyDir : Path -> Bool
+  isNonEmptyDir = path: 
+    if builtins.pathExists path && builtins.typeOf path == "path" then
+      let 
+        content = builtins.readDir path; 
+      in 
+        content != {}
+    else 
+      false;
 
   # hasPostfix : String -> Path -> Bool
   hasPostfix =

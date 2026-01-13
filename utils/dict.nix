@@ -1,5 +1,5 @@
 # the tool functions which is frequently used but not contained in nixpkgs.lib
-{ ... }:
+lib:
 let
   inherit (builtins)
     foldl'
