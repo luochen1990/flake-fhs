@@ -1,19 +1,19 @@
 {
-  description = "Full-featured project with modules and profiles using NFHS";
+  description = "Full-featured project with modules and profiles using NixFHS";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    NFHS.url = "github:luochen1990/NFHS";
+    nix-fhs.url = "github:luochen1990/Nix-FHS";
   };
 
   outputs =
     {
       self,
       nixpkgs,
-      NFHS,
+      nix-fhs,
       ...
     }:
-    NFHS.lib.mkFlake {
+    nix-fhs.lib.mkFlake {
       inherit self nixpkgs;
       roots = [ ./. ];
       supportedSystems = [

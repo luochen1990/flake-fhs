@@ -113,8 +113,9 @@ rec {
                 depth # assert (if current == root then depth == 0)
                 breadcrumbs # assert (length breadcrumbs == depth)
                 name
-                path # assert (path == root + concatMap (x: "/${x}") (breadcrumbs ++ [name]))
+                path # assert (path == root + concatMap (x: "/${x}") breadcrumbs')
                 ;
+              breadcrumbs' = breadcrumbs ++ [ name ];
             };
           in
           (if t.pick then [ t.out ] else [ ])

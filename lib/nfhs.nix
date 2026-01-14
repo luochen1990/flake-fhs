@@ -53,38 +53,30 @@ let
       optionsModule,
     }:
     let
-      unguardedConfigPaths = concatFor paths (
-        path:
-        (concatLists (
-          subDirsRec path (it: rec {
-            options-dot-nix = it.path + "/options.nix";
-            guarded = pathExists options-dot-nix;
-            into = !guarded;
-            pick = !guarded;
-            out = forFilter (lsFiles it.path) (
-              fname: if hasPostfix "nix" fname then (it.path + "/${fname}") else null
-            );
-          })
-        ))
-      );
+      unguardedConfigPaths = concatLists (exploreDir paths (it: rec {
+        options-dot-nix = it.path + "/options.nix";
+        guarded = pathExists options-dot-nix;
+        into = !guarded;
+        pick = !guarded;
+        out = forFilter (lsFiles it.path) (
+          fname: if hasPostfix "nix" fname then (it.path + "/${fname}") else null
+        );
+      }));
 
-      guardedSubdirs = concatFor paths (
-        path:
-        subDirsRec path (it: rec {
-          options-dot-nix = it.path + "/options.nix";
-          guarded = pathExists options-dot-nix;
-          into = !guarded;
-          pick = guarded;
-          out = {
-            inherit (it) breadcrumbs;
+      guardedSubdirs = exploreDir paths (it: rec {
+        options-dot-nix = it.path + "/options.nix";
+        guarded = pathExists options-dot-nix;
+        into = !guarded;
+        pick = guarded;
+        out = {
+          breadcrumbs = it.breadcrumbs';
+          paths = [ it.path ];
+          optionsModule = mkOptionsModule {
+            breadcrumbs = it.breadcrumbs';
             paths = [ it.path ];
-            optionsModule = mkOptionsModule {
-              inherit (it) breadcrumbs;
-              paths = [ it.path ];
-            };
           };
-        })
-      );
+        };
+      });
 
       # TODO: 这里需要对 breadcrumbs 进行去重，暂时先假设没有重复的情况
       children = for guardedSubdirs (subdir: mkGuardedTreeNode subdir);
@@ -372,7 +364,7 @@ in
             into = it.depth == 0 && outline.nixosConfigurations.judge it.name;
             pick = it.depth >= 1 && marked;
             out = {
-              name = concatStringsSep "/" (tail it.breadcrumbs ++ [ it.name ]);
+              name = concatStringsSep "/" (tail it.breadcrumbs');
               value = mkProfile it;
             };
           })

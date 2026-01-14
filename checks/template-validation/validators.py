@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Template validation for NFHS.
+Template validation for NixFHS.
 
-Tests templates with local NFHS to validate current development changes.
+Tests templates with local NixFHS to validate current development changes.
 Uses local path replacement to test the actual logic being developed.
 """
 
@@ -32,9 +32,9 @@ class ValidationResult(NamedTuple):
 
 
 class TemplateValidator:
-    """Validates NFHS templates."""
+    """Validates NixFHS templates."""
 
-    EXPECTED_GITHUB_URL = "github:luochen1990/NFHS"
+    EXPECTED_GITHUB_URL = "github:luochen1990/Nix-FHS"
 
     def __init__(self, templates_dir: Path, project_root: Path):
         self.templates_dir = templates_dir
@@ -78,7 +78,7 @@ class TemplateValidator:
             return TestResult("flake_check", False, f"Error running flake check: {e}")
 
     def _create_temp_template(self, template_path: Path, temp_dir: Path) -> TestResult:
-        """Create temporary template with local NFHS."""
+        """Create temporary template with local NixFHS."""
         try:
             # Copy template files
             for item in template_path.iterdir():
@@ -123,7 +123,7 @@ class TemplateValidator:
             self._check_github_url(template_path)
         ]
 
-        # Test with local NFHS
+        # Test with local NixFHS
         temp_dir = Path(tempfile.mkdtemp(prefix="template-test-"))
         try:
             # Create temporary template
@@ -166,7 +166,7 @@ def main():
     """Main entry point."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Validate NFHS templates")
+    parser = argparse.ArgumentParser(description="Validate NixFHS templates")
 
     # Required arguments to avoid path resolution issues
     parser.add_argument("--project-root", type=Path, default='.',
