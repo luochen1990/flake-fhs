@@ -12,13 +12,13 @@ NFHS 建立了文件系统到 flake outputs 的直接映射关系：
 
 | 文件路径  | 生成的 flake output  |  Nix 子命令         |
 | ------------- | ------------------ | ------------------------ |
-| `pkgs/<name>/package.nix`      | `packages.<system>.<name>`                   | `nix build .#<name>`               |
-| `modules/<name>/path/to/filename.nix`   | `nixosModules.<name>`  | nope |
-| `profiles/<name>/configuration.nix`   | `nixosConfigurations.<name>`  | `nixos-rebuild --flake .#<name>`    |
+| `pkgs/<name>/package.nix` (或 `packages/`)      | `packages.<system>.<name>`                   | `nix build .#<name>`               |
+| `modules/<name>/...` (或 `nixosModules/`)   | `nixosModules.<name>`  | - |
+| `profiles/<name>/configuration.nix` (或 `nixosConfigurations/`, `hosts/`)   | `nixosConfigurations.<name>`  | `nixos-rebuild --flake .#<name>`    |
 | `apps/<name>/default.nix`      | `apps.<system>.<name>`                       | `nix run .#<name>`                 |
-| `shells/<name>.nix` | `devShells.<system>.<name>`                  | `nix develop .#<name>`             |
+| `shells/<name>.nix` (或 `devShells/`) | `devShells.<system>.<name>`                  | `nix develop .#<name>`             |
 | `templates/<name>/`    | `templates.<name>`                           | `nix flake init --template <url>#<name>` |
-| `utils/<name>.nix`      | `utils.<name>`                                 | `nix eval .#utils.<name>`            |
+| `lib/<name>.nix` (或 `utils/`, `tools/`)      | `lib.<name>`                                 | `nix eval .#lib.<name>`            |
 | `checks/<name>.nix` 或 `checks/<path>/default.nix` | `checks.<system>.<name>` (路径 `/` 转为 `-`) | `nix flake check .#<name>`            |
 
 ### ✨ 核心特性
@@ -460,14 +460,14 @@ nix flake init --template .#rust-cli
 nix flake show
 ```
 
-## 🛠️ utils/ - 辅助函数库
+## 🛠️ lib/ - 辅助函数库
 
-`utils/` 目录定义可在其他地方引用的辅助函数和工具。
+`lib/` (或 `utils/`, `tools/`) 目录定义可在其他地方引用的辅助函数和工具。这些函数会被合并到 `flake outputs.lib` 中，并注入到 `pkgs.lib` 中以便在其他地方使用。
 
 ### 目录结构
 
 ```
-utils/
+lib/
 ├── list.nix
 └── file.nix
 ```
@@ -475,7 +475,7 @@ utils/
 ### 函数库示例
 
 ```nix
-# utils/list.nix
+# lib/list.nix
 {
   join = xs: builtins.concatList xs
 }
@@ -483,11 +483,13 @@ utils/
 
 ### 使用方法
 
-在 nixosConfigurations.nix 中使用
-```bash
-{ utils, ...}:
+在 nixosConfigurations.nix 或其他模块中使用：
+
+```nix
+{ lib, ...}:
 {
-  xs = utils.join [[1 2 3] [4 5]];
+  # NFHS 会将自定义的 lib 注入到 pkgs.lib 中
+  xs = lib.list.join [[1 2 3] [4 5]];
 }
 ```
 
@@ -546,35 +548,13 @@ nix flake show
 
 同时存在 `checks/test.nix` 和 `checks/test/default.nix` 时，文件模式优先。
 
-## 🔄 overlays/ - 包覆盖
+## 🧹 Formatter - 代码格式化
 
-NFHS 根据 `pkgs/` 目录自动生成 `flake outputs.overlays`，允许在其他项目中使用您的包。
+NFHS 默认配置了 `formatter` 输出，使用 `nixfmt-tree` 作为格式化工具。
 
-### 自动生成的 overlay
-
-在其他项目中使用您的包:
-
-```nix
-{
-  description = "My project";
-
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs";
-    your-flake.url = "github:your-username/your-flake";
-  };
-
-  outputs = { nixpkgs, your-flake }:
-    let
-      system = "x86_64-linux";
-      pkgs = import nixpkgs {
-        inherit system;
-        overlays = [ your-flake.overlays.default ];
-      };
-    in {
-      # 现在可以使用您在 pkgs/ 中定义的包
-      packages.${system}.my-app = pkgs.hello;  # 来自您的 NFHS 项目
-    };
-}
+```bash
+# 格式化项目中的所有 Nix 文件
+nix fmt
 ```
 
 ## mkFlake 配置项
@@ -592,7 +572,7 @@ NFHS 根据 `pkgs/` 目录自动生成 `flake outputs.overlays`，允许在其�
 
 | 参数 | 类型 | 默认值 | 描述 |
 |------|------|--------|------|
-| `roots` | list | `[ ./. ]` | 项目根目录列表，支持多根项目结构 |
+| `roots` | list | `[ ./. ]` (以及 `./nix` 若存在) | 项目根目录列表，支持多根项目结构 |
 | `inputs` | attrset | `{ }` | 其他 flake 输入 |
 | `lib` | attrset | `nixpkgs.lib` | Nix 函数库，默认从 nixpkgs.lib 获取 |
 | `supportedSystems` | list | `lib.systems.flakeExposed` | 支持的系统架构列表 |
@@ -600,7 +580,7 @@ NFHS 根据 `pkgs/` 目录自动生成 `flake outputs.overlays`，允许在其�
 
 ### 参数说明
 
-- **roots**: 指定项目根目录列表，支持多个根目录，用于大型项目或模块化项目结构
+- **roots**: 指定项目根目录列表，支持多个根目录。默认包含项目根目录，如果存在 `nix/` 目录也会自动包含。
 - **lib**: Nix 函数库，默认值为 `nixpkgs.lib`，通常无需手动指定
 - **supportedSystems**: 默认包含 x86_64-linux, x86_64-darwin, aarch64-linux, aarch64-darwin 等主流架构
 - **nixpkgsConfig**: 全局 Nixpkgs 配置，会影响所有系统上下文中的 pkgs 实例
