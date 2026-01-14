@@ -200,7 +200,7 @@ in
               #lib
               inputs
               ;
-            lib = lib';
+            lib = lib' // lib;
           };
         in
         {
