@@ -1,6 +1,6 @@
 # Simple Project Template
 
-这是一个使用 NFHS 的简单项目模板，展示了基本的包管理、开发环境和应用程序。
+这是一个使用 Nix FHS 的简单项目模板，展示了基本的包管理、开发环境和应用程序。
 
 ## 项目结构
 
@@ -23,7 +23,7 @@
 
 ```bash
 # 复制模板到新项目
-nix flake init --template <NFHS-url>#simple-project
+nix flake init --template <Nix-FHS-url>#simple-project
 
 # 构建包
 nix build .#hello-custom

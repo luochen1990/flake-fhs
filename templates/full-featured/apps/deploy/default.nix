@@ -11,7 +11,7 @@
       set -euo pipefail
 
       # Simple deployment simulation
-      echo "🚀 Deploying NFHS project..."
+      echo "🚀 Deploying Nix FHS project..."
       echo ""
 
       if [ $# -eq 0 ]; then
@@ -40,6 +40,6 @@
     ''
   );
   meta = {
-    description = "Deployment helper for NFHS projects";
+    description = "Deployment helper for Nix FHS projects";
   };
 }

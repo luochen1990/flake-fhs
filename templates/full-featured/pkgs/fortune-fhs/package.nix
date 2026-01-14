@@ -8,7 +8,7 @@ writeShellScriptBin "fortune-fhs" ''
   set -euo pipefail
 
   fortunes=(
-    "NFHS makes Nix development easier!"
+    "Nix FHS makes Nix development easier!"
     "Convention over configuration is the way to go."
     "Zero boilerplate, maximum productivity."
     "Your Nix flakes will never be the same."

@@ -43,7 +43,7 @@
   ];
 
   # Networking configuration
-  networking.hostName = "NFHS-example";
+  networking.hostName = "NixFHS-example";
   networking.networkmanager.enable = true;
 
   # Firewall configuration
@@ -72,9 +72,9 @@
 
   # Create a welcome message
   users.motd = ''
-    Welcome to NFHS Example!
+    Welcome to NixFHS Example!
 
-    This system is configured using NFHS with:
+    This system is configured using Nix FHS with:
     - Custom service on port ${toString config.services.my-service.port}
     - Development tools and utilities
     - Security hardening

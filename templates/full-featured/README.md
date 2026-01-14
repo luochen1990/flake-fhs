@@ -1,6 +1,6 @@
 # Full-Featured Project Template
 
-这是一个完整功能的 NFHS 项目模板，展示了所有支持的功能和最佳实践。
+这是一个完整功能的 Nix FHS 项目模板，展示了所有支持的功能和最佳实践。
 
 ## 项目结构
 
@@ -75,7 +75,7 @@
 
 ```bash
 # 创建新项目
-nix flake init --template github:luochen1990/NFHS#full-featured
+nix flake init --template github:luochen1990/Nix-FHS#full-featured
 
 # 查看项目状态
 nix run .#status

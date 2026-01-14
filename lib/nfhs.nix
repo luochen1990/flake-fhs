@@ -1,4 +1,4 @@
-# NFHS core implementation
+# Nix FHS core implementation
 # mkFlake function that auto-generates flake outputs from directory structure
 lib:
 let

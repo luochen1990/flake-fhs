@@ -1,7 +1,7 @@
 { pkgs, system, ... }:
 
 pkgs.mkShell {
-  name = "NFHS-dev";
+  name = "nix-fhs-dev";
 
   buildInputs = with pkgs; [
     git
@@ -12,7 +12,7 @@ pkgs.mkShell {
   ];
 
   shellHook = ''
-    echo "🚀 Welcome to NFHS development environment!"
+    echo "🚀 Welcome to Nix FHS development environment!"
     echo "Available commands: git, vim, curl, nixfmt, hello"
     echo "Try: nix build .#hello-custom"
     echo "System: ${system}"

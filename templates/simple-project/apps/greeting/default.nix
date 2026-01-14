@@ -5,7 +5,7 @@
   program = toString (
     pkgs.writeScriptBin "greeting-app" ''
       #!${pkgs.runtimeShell}
-      echo "Hello from NFHS!"
+      echo "Hello from Nix FHS!"
       echo "This app was automatically discovered and packaged."
       echo "Current time: $(date)"
       echo "System: $(uname -a)"

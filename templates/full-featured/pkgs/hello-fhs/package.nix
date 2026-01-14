@@ -15,12 +15,12 @@ stdenv.mkDerivation rec {
   installPhase = ''
         mkdir -p $out/bin
         echo '#!/bin/sh
-    echo "Hello from NFHS package ${pname}-${version}!"' > $out/bin/hello-fhs
+    echo "Hello from Nix FHS package ${pname}-${version}!"' > $out/bin/hello-fhs
         chmod +x $out/bin/hello-fhs
   '';
 
   meta = {
-    description = "A simple hello package demonstrating NFHS";
+    description = "A simple hello package demonstrating Nix FHS";
     license = lib.licenses.mit;
     platforms = lib.platforms.all;
   };
