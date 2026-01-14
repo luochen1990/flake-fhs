@@ -33,7 +33,6 @@
 
   # System packages from our flake
   environment.systemPackages = with pkgs; [
-    vim
     git
     curl
     wget
@@ -43,7 +42,7 @@
   ];
 
   # Networking configuration
-  networking.hostName = "NixFHS-example";
+  networking.hostName = "laptop";
   networking.networkmanager.enable = true;
 
   # Firewall configuration

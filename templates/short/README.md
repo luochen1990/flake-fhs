@@ -11,7 +11,7 @@
 │       └── package.nix
 ├── shells/
 │   ├── default.nix         # 默认开发环境
-│   └── rust.nix           # Rust 开发环境
+│   └── python.nix         # Python 开发环境
 ├── apps/
 │   └── greeting/          # 示例应用程序
 │       └── default.nix
@@ -37,7 +37,7 @@ nix build .#hello
 
 # 进入开发环境
 nix develop .#default
-nix develop .#rust
+nix develop .#python
 
 # 运行应用
 nix run .#greeting

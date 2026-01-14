@@ -15,16 +15,14 @@
 │       ├── config.nix      # 模块配置实现
 │       └── default.nix     # 模块入口
 ├── nixosConfigurations/     # flake-output.nixosConfigurations
-│   └── example/            # 示例系统配置
+│   └── laptop/             # 示例系统配置
 │       └── configuration.nix
 ├── devShells/               # flake-output.devShells
-│   ├── default.nix         # 默认开发环境
-│   └── rust.nix           # Rust 开发环境
+│   └── default.nix         # 默认开发环境
 ├── apps/                   # flake-output.apps
 │   ├── status/            # 项目状态应用
 │   └── deploy/            # 部署助手应用
 ├── checks/                 # flake-output.checks
-│   ├── format.nix         # 代码格式检查
 │   ├── lint.nix           # 代码质量检查
 │   └── unit/              # 单元测试
 │       └── default.nix
@@ -52,7 +50,7 @@
 ### 🔧 **开发环境**
 - 多种开发环境支持
 - 工具链集成和环境变量配置
-- 示例：默认环境和 Rust 专用环境
+- 示例：默认环境和 Python 专用环境
 
 ### 🚀 **应用程序**
 - 命令行应用封装
@@ -61,8 +59,8 @@
 
 ### ✅ **质量检查**
 - 文件和目录模式混合支持
-- 代码格式化、linting、单元测试
-- 示例：格式检查、代码质量检查、单元测试
+- 代码 linting、单元测试
+- 示例：代码质量检查、单元测试
 
 ## 快速开始
 
@@ -127,7 +125,7 @@ stdenv.mkDerivation {
 {
   services.my-module.enable = true;
 
-  environment.systemPackages = with pkgs; [ vim git ];
+  environment.systemPackages = with pkgs; [ git ];
 }
 ```
 
@@ -135,7 +133,7 @@ stdenv.mkDerivation {
 
 ```bash
 # 构建 NixOS 系统
-nixos-rebuild switch --flake .#example
+nixos-rebuild switch --flake .#laptop
 
 # 部署到测试环境
 nix run .#deploy staging

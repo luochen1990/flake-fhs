@@ -79,7 +79,6 @@ cat > shells/default.nix << 'EOF'
 { pkgs, ... }:
 {
   packages = with pkgs; [
-    vim
     git
   ];
 }

@@ -17,15 +17,7 @@ pkgs.mkShell {
 
     # Text processing
     ripgrep
-    fzf
-    bat
     jq
-    yq
-
-    # Nix development
-    nixfmt-tree
-    deadnix
-    statix
 
     # Useful utilities
     file
@@ -38,7 +30,7 @@ pkgs.mkShell {
     echo ""
     echo "📋 Available development shells:"
     echo "  nix develop .#default      - Basic development environment"
-    echo "  nix develop .#rust         - Rust development environment"
+    echo "  nix develop .#python       - Python development environment"
     echo ""
     echo "🔧 Available apps:"
     echo "  nix run .#status           - Show project status"
