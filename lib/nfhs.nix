@@ -225,7 +225,16 @@ in
         let
           moduleTree = mkGuardedTreeNode {
             modPath = [ ];
-            paths = filter pathExists (map (root: root + "/modules") roots);
+            paths = concatFor roots (
+              root:
+              forFilter outline.nixosModules.subdirs (
+                subdir:
+                let
+                  p = root + "/${subdir}";
+                in
+                if pathExists p then p else null
+              )
+            );
             optionsModule = { };
           };
         in
