@@ -32,9 +32,11 @@ The framework implements an automatic mapping from directory structure to flake 
   - `utils/file.nix`: File system operations
   - `utils/more/fhs.nix`: Core `mkFlake` implementation
 
-- **templates/**: Project templates for different use cases
-  - `simple-project`: Basic project with packages, shells, and apps
-  - `full-featured`: Complete template with all features
+ - **templates/**: Project templates for different use cases
+   - `std`: Standard template with complete nixos-config and flake outputs 1:1 naming
+   - `short`: Short-named template with complete nixos-config
+   - `zero`: Minimal template with only flake.nix (directories left for user to create)
+   - `project`: Project-embedded template with `./nix` directory (for non-Nix projects)
 
 ## Module System Architecture
 

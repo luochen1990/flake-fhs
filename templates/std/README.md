@@ -1,6 +1,6 @@
-# Full-Featured Project Template
+# Standard Template
 
-这是一个完整功能的 Nix FHS 项目模板，展示了所有支持的功能和最佳实践。
+标准模板，包含完整的 NixOS 系统配置功能，遵循 flake outputs 1:1 的标准命名约定。
 
 ## 项目结构
 
@@ -10,9 +10,10 @@
 │   ├── hello-fhs/          # 示例包：问候程序
 │   └── fortune-fhs/        # 示例包：Fortune 生成器
 ├── modules/                 # flake-output.nixosModules
-│   └── my-service/         # 示例 NixOS 模块
+│   └── services/my-service/ # 示例 NixOS 模块
 │       ├── options.nix     # 模块选项定义
-│       └── config.nix      # 模块配置实现
+│       ├── config.nix      # 模块配置实现
+│       └── default.nix     # 模块入口
 ├── profiles/               # flake-output.nixosConfigurations
 │   └── example/            # 示例系统配置
 │       └── configuration.nix
@@ -22,9 +23,6 @@
 ├── apps/                   # flake-output.apps
 │   ├── status/            # 项目状态应用
 │   └── deploy/            # 部署助手应用
-├── utils/                  # flake-output.lib
-│   ├── string.nix         # 字符串工具函数
-│   └── project.nix        # 项目工具函数
 ├── checks/                 # flake-output.checks
 │   ├── format.nix         # 代码格式检查
 │   ├── lint.nix           # 代码质量检查
@@ -61,11 +59,6 @@
 - 脚本和工具集成
 - 示例：状态查看器和部署助手
 
-### 📚 **工具库**
-- 可复用的工具函数
-- 支持函数组合和模块化设计
-- 示例：字符串操作和项目管理工具
-
 ### ✅ **质量检查**
 - 文件和目录模式混合支持
 - 代码格式化、linting、单元测试
@@ -75,7 +68,7 @@
 
 ```bash
 # 创建新项目
-nix flake init --template github:luochen1990/Nix-FHS#full-featured
+nix flake init --template github:luochen1990/Nix-FHS#std
 
 # 查看项目状态
 nix run .#status
@@ -141,18 +134,6 @@ stdenv.mkDerivation {
 }
 ```
 
-### 4. 工具函数使用
-在配置中导入和使用工具：
-```nix
-{ config, lib, utils, ... }:
-{
-  environment.motd = ''
-    Welcome to ${utils.string.toTitle "my system"}!
-    Version: ${utils.project.generateVersion}
-  '';
-}
-```
-
 ## 部署
 
 ```bash
@@ -181,5 +162,4 @@ nix run .#deploy production
 - **新配置**：在 `profiles/` 下创建 `configuration.nix`
 - **新环境**：在 `shells/` 下创建 `*.nix`
 - **新应用**：在 `apps/` 下创建目录和 `default.nix`
-- **新工具**：在 `utils/` 下创建 `*.nix`
 - **新检查**：在 `checks/` 下添加文件或目录

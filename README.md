@@ -38,11 +38,17 @@ NixFHS 提供：
 NixFHS 提供了若干模板来快速启动不同类型的项目：
 
 ```bash
-# 创建简单项目
-nix flake init --template github:luochen1990/Nix-FHS#simple-project
+# 标准模板（完整功能，标准命名）
+nix flake init --template github:luochen1990/Nix-FHS#std
 
-# 创建完整功能项目
-nix flake init --template github:luochen1990/Nix-FHS#full-featured
+# 简短模板（完整功能，简短命名）
+nix flake init --template github:luochen1990/Nix-FHS#short
+
+# 最小模板（仅 flake.nix）
+nix flake init --template github:luochen1990/Nix-FHS#zero
+
+# 项目内嵌模板（非纯 Nix 项目）
+nix flake init --template github:luochen1990/Nix-FHS#project
 ```
 
 这将直接为你生成一个简洁并且合法的 flake.nix 文件：

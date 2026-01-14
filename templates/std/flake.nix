@@ -1,5 +1,5 @@
 {
-  description = "Full-featured project with modules and profiles using NixFHS";
+  description = "Standard template with full nixos-config";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
