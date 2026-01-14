@@ -102,7 +102,7 @@ in
 {
   # Main mkFlake function
   mkFlake =
-    mkFlakeArgs@{
+    {
       self,
       nixpkgs,
       inputs ? self.inputs,
@@ -111,7 +111,6 @@ in
       ]
       ++ filter pathExists [
         (self.outPath + "/nix")
-        (self.outPath + "/private")
       ],
       lib ? nixpkgs.lib, # 这里用户提供的 lib 是不附带自定义工具函数的标准库lib
       supportedSystems ? lib.systems.flakeExposed,
@@ -191,8 +190,7 @@ in
           lib' = prepareLib {
             inherit roots pkgs;
             libSubdirs = outline.lib.subdirs;
-            lib = mkFlakeArgs.lib;
-            #lib = lib;
+            lib = lib;
           };
           specialArgs = {
             inherit
@@ -355,7 +353,7 @@ in
               #   check = true;
               # };
             in
-            mkFlakeArgs.lib.nixosSystem {
+            lib.nixosSystem {
               #lib.nixosSystem {
               inherit (context)
                 #self
@@ -442,7 +440,6 @@ in
       lib = prepareLib {
         inherit roots lib;
         libSubdirs = outline.lib.subdirs;
-        #lib = mkFlakeArgs.lib;
       };
 
       templates =
