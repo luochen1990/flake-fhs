@@ -32,6 +32,5 @@ writeShellScriptBin "status" ''
   echo "  - laptop: Example system configuration"
 ''
 // {
-  meta.mainProgram = "status";
   meta.description = "Show project status and available components";
 }

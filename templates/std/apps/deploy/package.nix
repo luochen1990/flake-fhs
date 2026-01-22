@@ -35,6 +35,5 @@ writeShellScriptBin "deploy" ''
   echo "✅ Deployment to $target completed successfully!"
 ''
 // {
-  meta.mainProgram = "deploy";
   meta.description = "Deployment helper for Nix FHS projects";
 }

@@ -10,6 +10,5 @@ writeShellScriptBin "greeting-app" ''
   echo "Current time: $(date)"
 ''
 // {
-  meta.mainProgram = "greeting-app";
   meta.description = "A simple greeting application";
 }

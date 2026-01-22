@@ -274,17 +274,21 @@ in
 
       apps = eachSystem (
         context:
+        let
+          inherit (context.lib.more) inferMainProgram;
+        in
         listToAttrs (
           exploreDir roots (it: rec {
             package-dot-nix = it.path + "/package.nix";
             pkg = context.pkgs.callPackage package-dot-nix { };
+            mainProgram = inferMainProgram pkg;
             into = it.depth == 0 && outline.apps.judge it.name || it.depth >= 1;
             pick = it.depth >= 1 && pathExists package-dot-nix;
             out = {
               name = concatStringsSep "/" (tail it.breadcrumbs');
               value = {
                 type = "app";
-                program = "${pkg}/bin/${pkg.meta.mainProgram}";
+                program = "${pkg}/bin/${mainProgram}";
               };
             };
           })

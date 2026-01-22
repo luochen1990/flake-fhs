@@ -304,7 +304,13 @@ nixos-rebuild build --flake .#server
 
 `apps/` 目录定义可直接运行的应用程序，每个子目录对应一个 `flake outputs.apps` 项。
 
-**设计说明**：`apps/` 目录与 `pkgs/` 目录使用相同的 `package.nix` 结构。Nix FHS 会自动为每个包生成对应的 `apps` 输出，使用 `meta.mainProgram` 作为程序入口点。这意味着同一个定义可以同时作为 `packages` 和 `apps` 使用。
+**设计说明**：`apps/` 目录与 `pkgs/` 目录使用相同的 `package.nix` 结构。Nix FHS 会自动为每个包生成对应的 `apps` 输出，使用以下规则推断程序入口点（优先级从高到低）：
+
+1. `meta.mainProgram` - 显式指定的程序名
+2. `pname` - 包名称（如果存在）
+3. `name` 的第一部分 - 去除版本号后的包名（如 `hello-2.10` → `hello`）
+
+这意味着同一个定义可以同时作为 `packages` 和 `apps` 使用，且通常无需显式指定 `meta.mainProgram`。
 
 ### 目录结构
 
@@ -331,13 +337,15 @@ writeShellScriptBin "hello-app" ''
   echo "Hello from Nix FHS!"
   echo "Current time: $(date)"
 ''
-# 必须定义 meta.mainProgram 以让 Nix FHS 知道程序的入口点
 // {
-  meta.mainProgram = "hello-app";
+  meta.description = "A simple hello app";
+  # meta.mainProgram 可选，writeShellScriptBin 会自动设置
 }
 ```
 
-或者使用 `mkDerivation` 打包更复杂的应用：
+**注意**：`writeShellScriptBin` 会自动将脚本名称设置为 `meta.mainProgram`，因此无需手动指定。
+
+对于使用 `mkDerivation` 打包的更复杂应用：
 
 ```nix
 # apps/deploy/package.nix
@@ -357,10 +365,15 @@ stdenv.mkDerivation {
     chmod +x $out/bin/deploy
   '';
 
-  meta.mainProgram = "deploy";
   meta.description = "Deployment helper for Nix FHS projects";
+  # meta.mainProgram 可选，会自动从 pname 推断为 "deploy"
 }
 ```
+
+**推断规则**：
+- 如果 `pname = "deploy"`，则 `mainProgram` 自动推断为 `"deploy"`
+- 如果 `name = "myapp-1.2.3"` 且没有 `pname`，则 `mainProgram` 自动推断为 `"myapp"`
+- 显式设置 `meta.mainProgram` 可覆盖自动推断
 
 ### 使用方法
 
