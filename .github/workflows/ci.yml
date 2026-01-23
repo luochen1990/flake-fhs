@@ -17,6 +17,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Free Disk Space (Nix-friendly)
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          # Disable tool cache to free ~6GB
+          tool-cache: false
+          # Remove pre-installed toolchains not needed for Nix builds
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - name: Install Nix
         uses: determinateSystems/nix-installer-action@v9
 
