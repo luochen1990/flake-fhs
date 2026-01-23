@@ -29,6 +29,12 @@ jobs:
       - name: Install Nix
         uses: determinateSystems/nix-installer-action@v9
 
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v14
+        with:
+          name: flake-fhs
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
       - name: Run flake check
         run: nix flake check
 
