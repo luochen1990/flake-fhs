@@ -4,6 +4,7 @@
 # mkFlake function that auto-generates flake outputs from directory structure
 lib:
 let
+  nixFhsLib = lib;
   inherit (builtins)
     pathExists
     listToAttrs
@@ -275,7 +276,7 @@ in
       apps = eachSystem (
         context:
         let
-          inherit (context.lib.more) inferMainProgram;
+          inherit (nixFhsLib.more context.pkgs) inferMainProgram;
         in
         listToAttrs (
           exploreDir roots (it: rec {

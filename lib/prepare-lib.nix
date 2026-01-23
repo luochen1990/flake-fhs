@@ -71,7 +71,7 @@ in
 
       # 返回（不依赖pkgs的）自定义函数集合，但每个自定义函数都可从 lib 参数中访问（不依赖pkgs的）基础工具函数
       lv1 = unionFor (levels.lv1 or [ ]) (x: import x.path layer1);
-      layer1 = lv1 // layer0; # TODO: 命名冲突不覆盖，而是直接报错
+      layer1 = lv1 // layer0 // { more = lv2; }; # TODO: 命名冲突不覆盖，而是直接报错
       lv10 = lv1 // lv0;
 
       # 返回（依赖pkgs的）自定义函数集合，但每个自定义函数都可从 lib 参数中访问全量工具函数
