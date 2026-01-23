@@ -59,7 +59,7 @@ let
       };
 
       outputs = flakeNix.outputs mockInputs;
-      system = pkgs.system;
+      system = pkgs.stdenv.hostPlatform.system;
 
       # Extract outputs for the current system
       packages = outputs.packages.${system} or { };
