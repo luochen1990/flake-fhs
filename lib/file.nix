@@ -33,18 +33,15 @@ rec {
     else
       false;
 
-  # hasPostfix : String -> Path -> Bool
-  hasPostfix = postfix: hasSuffix ("." + postfix);
-
   # hasSuffix : String -> Path -> Bool
   hasSuffix =
     suffix: path:
+    assert builtins.substring 0 1 suffix == ".";
     let
       str = toString path;
       strLen = builtins.stringLength str;
       sufLen = builtins.stringLength suffix;
     in
-    assert builtins.substring 0 1 suffix == ".";
     strLen >= sufLen && builtins.substring (strLen - sufLen) sufLen str == suffix;
 
   # underDir : Path -> Path -> Bool
@@ -186,8 +183,8 @@ rec {
       ++ map (s: "${dir}/${s}") (findSubDirsContains p filename)
     ) (lsDirsAll root);
 
-  # scanFilesByPostfix : String -> Path -> [Path]
+  # scanFilesBySuffix : String -> Path -> [Path]
   # 扫描目录中具有指定后缀的文件，返回文件路径列表
-  scanFilesByPostfix =
-    postfix: dir: if builtins.pathExists dir then (findFilesRec (hasPostfix postfix) dir) else [ ];
+  scanFilesBySuffix =
+    suffix: dir: if builtins.pathExists dir then (findFilesRec (hasSuffix suffix) dir) else [ ];
 }

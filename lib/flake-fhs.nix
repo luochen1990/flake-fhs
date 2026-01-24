@@ -28,7 +28,7 @@ let
     lsFiles
     findSubDirsContains
     exploreDir
-    hasPostfix
+    hasSuffix
     recursiveUpdate
     ;
 
@@ -64,7 +64,7 @@ let
           into = !guarded;
           pick = !guarded;
           out = forFilter (lsFiles it.path) (
-            fname: if hasPostfix "nix" fname then (it.path + "/${fname}") else null
+            fname: if hasSuffix ".nix" fname then (it.path + "/${fname}") else null
           );
         })
       );
@@ -382,7 +382,7 @@ let
                   # Case 1: shells/*.nix -> devShells.*
                   forFilter (lsFiles it.path) (
                     fname:
-                    if hasPostfix "nix" fname then
+                    if hasSuffix ".nix" fname then
                       {
                         name = lib.removeSuffix ".nix" fname;
                         value = import (it.path + "/${fname}") context;

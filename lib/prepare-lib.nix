@@ -20,7 +20,7 @@ let
     mapFilter
     concatFor
     findFiles
-    hasPostfix
+    hasSuffix
     isNonEmptyDir
     lsDirs
     exploreDir
@@ -44,7 +44,7 @@ in
         exploreDir roots (it: rec {
           into = it.depth == 0 && elem it.name libSubdirs || it.depth >= 1;
           pick = into;
-          out = for (findFiles (hasPostfix "nix") it.path) (
+          out = for (findFiles (hasSuffix ".nix") it.path) (
             fpath:
             let
               attrs-or-func = import fpath;
