@@ -7,9 +7,11 @@ let
     map
     listToAttrs
     attrNames
+    length
+    intersectAttrs
     ;
 in
-{
+rec {
 
   # dict : [k] -> (k -> v) -> Dict k v
   #  or lib.genAttrs
@@ -31,6 +33,17 @@ in
         value = fv k;
       }) ks
     );
+
+  # disjoint : Dict k v -> Dict k v -> Bool
+  disjoint = a: b: length (attrNames (intersectAttrs a b)) == 0;
+
+  # merge2 : Dict k v -> Dict k v -> Dict k v
+  # disjoint union 2 dict
+  merge2 = a: b: assert (disjoint a b); a // b;
+
+  # merge : [Dict k v] -> Dict k v
+  # disjoint union
+  merge = ds: foldl' (a: b: assert (disjoint a b); a // b) { } ds;
 
   # union : [Dict k v] -> Dict k v
   #  similar to fold in Haskell
