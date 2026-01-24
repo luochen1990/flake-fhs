@@ -30,6 +30,7 @@ let
     exploreDir
     hasSuffix
     recursiveUpdate
+    merge2
     ;
 
   mkOptionsModule =
@@ -255,20 +256,20 @@ let
               config = nixpkgsConfig;
             }
           );
-          lib' = prepareLib {
+          preparedLib = prepareLib {
             inherit roots pkgs;
             libSubdirs = layout.lib.subdirs;
-            lib = lib;
+            lib = mergedLib;
           };
+          mergedLib = merge2 preparedLib lib;
           specialArgs = {
             inherit
               self
               system
-              #pkgs
-              #lib
+              pkgs
               inputs
               ;
-            lib = lib' // lib;
+            lib = mergedLib;
           };
         in
         {
