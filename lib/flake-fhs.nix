@@ -12,8 +12,6 @@ let
     tail
     concatLists
     elem
-    isFunction
-    isList
     ;
 
   inherit (lib)
@@ -29,8 +27,6 @@ let
     findSubDirsContains
     exploreDir
     hasSuffix
-    recursiveUpdate
-    #merge2
     ;
 
   mkOptionsModule =
