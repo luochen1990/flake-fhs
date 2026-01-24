@@ -630,7 +630,7 @@ let
         else if pathExists treefmtToml then
           pkgs.treefmt.withConfig { configFile = treefmtToml; }
         else
-          pkgs.nixfmt-rfc-style
+          pkgs.treefmt
       );
     };
 in

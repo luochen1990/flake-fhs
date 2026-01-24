@@ -39,11 +39,20 @@ rec {
 
   # merge2 : Dict k v -> Dict k v -> Dict k v
   # disjoint union 2 dict
-  merge2 = a: b: assert (disjoint a b); a // b;
+  merge2 =
+    a: b:
+    assert (disjoint a b);
+    a // b;
 
   # merge : [Dict k v] -> Dict k v
   # disjoint union
-  merge = ds: foldl' (a: b: assert (disjoint a b); a // b) { } ds;
+  merge =
+    ds:
+    foldl' (
+      a: b:
+      assert (disjoint a b);
+      a // b
+    ) { } ds;
 
   # union : [Dict k v] -> Dict k v
   #  similar to fold in Haskell
