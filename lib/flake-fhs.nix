@@ -520,14 +520,17 @@ let
               inherit (context)
                 #self
                 system
-                pkgs
+                #pkgs
                 lib
                 ;
               specialArgs =
                 context.specialArgs
                 // nixosConfigurationsConfig.specialArgs info.system
                 // nixosConfigurationsConfig.perHost.specialArgs hostName;
-              inherit modules;
+              modules = modules ++ [
+                #nixpkgs.nixosModules.readOnlyPkgs #TODO: fix this
+                { nixpkgs.pkgs = context.pkgs; }
+              ];
             };
         in
         listToAttrs (
