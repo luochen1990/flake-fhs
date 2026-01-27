@@ -274,6 +274,14 @@ let
             default = _: { };
             description = "Extra specialArgs to pass to nixosSystem. Receives system as argument.";
           };
+
+          perHost = {
+            specialArgs = lib.mkOption {
+              type = lib.types.functionTo lib.types.attrs;
+              default = _: { };
+              description = "Extra specialArgs to pass to nixosSystem. Receives hostName as argument.";
+            };
+          };
         };
       };
     };
@@ -505,6 +513,7 @@ let
               #   args = { };
               #   check = true;
               # };
+              hostName = concatStringsSep "/" (tail it.breadcrumbs');
             in
             lib.nixosSystem {
               #lib.nixosSystem {
@@ -514,7 +523,10 @@ let
                 pkgs
                 lib
                 ;
-              specialArgs = context.specialArgs // nixosConfigurationsConfig.specialArgs info.system;
+              specialArgs =
+                context.specialArgs
+                // nixosConfigurationsConfig.specialArgs info.system
+                // nixosConfigurationsConfig.perHost.specialArgs hostName;
               inherit modules;
             };
         in
