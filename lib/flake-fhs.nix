@@ -37,7 +37,8 @@ let
     let
       isPath = builtins.isPath module || builtins.isString module;
       file = if isPath then module else null;
-      m = if isPath then import module else module;
+      autoEnable = file != null && baseNameOf (toString file) == "options.nix";
+      m = if isPath then if isEmptyFile module then { } else import module else module;
 
       # Use explicit _file attribute instead of setDefaultModuleLocation
       # to ensure we have full control over the functor structure.
@@ -62,7 +63,16 @@ let
           newImports = originalImports;
 
           originalOptions = content.options or { };
-          newOptions = if originalOptions == { } then { } else lib.setAttrByPath modPath originalOptions;
+          optionsWithEnable =
+            if autoEnable && !(originalOptions ? enable) then
+              originalOptions
+              // {
+                enable = lib.mkEnableOption (concatStringsSep "." modPath);
+              }
+            else
+              originalOptions;
+
+          newOptions = if optionsWithEnable == { } then { } else lib.setAttrByPath modPath optionsWithEnable;
 
           explicitConfig = content.config or { };
           implicitConfig = removeAttrs content [
@@ -120,17 +130,10 @@ let
     let
       modPath = it.modPath;
       options-dot-nix = it.path + "/options.nix";
-      enableOptionModule = {
-        options = lib.setAttrByPath modPath {
-          enable = lib.mkEnableOption (concatStringsSep "." modPath);
-        };
-      };
-      userModule = if isEmptyFile options-dot-nix then { } else options-dot-nix;
     in
     {
       imports = [
-        enableOptionModule
-        (warpModule modPath userModule)
+        (warpModule modPath options-dot-nix)
       ];
     };
 

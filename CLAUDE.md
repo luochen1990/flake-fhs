@@ -46,9 +46,9 @@ The framework implements an advanced module loading system:
 
 - **Guarded vs Unguarded Modules**: Directories containing `options.nix` are "guarded" (default disabled), others are "unguarded" (default enabled)
 - **Partial Loading**: Implements performance optimization by loading only necessary modules
-- **Auto-enable Options**: Automatically generates enable options for guarded modules
+- **Auto-enable Options**: Automatically generates enable options for guarded modules (if not manually defined)
 - **Module Discovery**: Automatically discovers and imports modules based on directory structure
-- **Option Nesting**: Automatically nests options under module paths (e.g. `services/web-server/options.nix` -> `options.services.web-server.*`) and auto-generates `enable` option
+- **Option Nesting**: Automatically nests options under module paths (e.g. `services/web-server/options.nix` -> `options.services.web-server.*`) and auto-generates `enable` option (if missing)
 
 ### Module Loading Rules
 1. All unguarded directory modules are imported
