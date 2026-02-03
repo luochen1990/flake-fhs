@@ -56,7 +56,10 @@ let
         content: config: lib:
         let
           originalImports = content.imports or [ ];
-          newImports = map (warpModule modPath) originalImports;
+          # NOTE: We must NOT recursively warp imports here.
+          # These imports may be external modules (e.g. from nixpkgs) that should not be warped.
+          # Warping them would break their logic (e.g. options._class for standard NixOS modules).
+          newImports = originalImports;
 
           originalOptions = content.options or { };
           newOptions = if originalOptions == { } then { } else lib.setAttrByPath modPath originalOptions;
@@ -132,11 +135,9 @@ let
     };
 
   # mkDefaultModule : GuardedTreeNode -> Module
-  mkDefaultModule =
-    it:
-    warpModule it.modPath {
-      imports = it.unguardedConfigPaths;
-    };
+  mkDefaultModule = it: {
+    imports = map (warpModule it.modPath) it.unguardedConfigPaths;
+  };
 
   mkGuardedTree =
     rootModulePaths:
