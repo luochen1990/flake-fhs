@@ -31,12 +31,7 @@ let
     isEmptyFile
     ;
 
-  loadModule =
-    path: args:
-    let
-      m = import path;
-    in
-    if isFunction m then m args else m;
+  loadModule = args: m: if isFunction m then m args else m;
 
   setDefaultModuleLocation =
     if builtins.hasAttr "setDefaultModuleLocation" lib then
@@ -48,42 +43,88 @@ let
     else
       (file: m: m);
 
+  # args: [ { argName = isOptional; ... } ... ]
+  # Returns: { argName = isOptional; ... } where isOptional is true only if ALL are true (AND logic).
+  # If an arg is mandatory (false) in ANY module, it becomes mandatory (false) in the result.
+  mergeFnArgs =
+    argsList:
+    let
+      # Get all unique argument names
+      allKeys = lib.unique (concatLists (map builtins.attrNames argsList));
+      # Determine if a key should be optional.
+      # It is optional (true) ONLY if it is optional in ALL signatures that contain it?
+      # Wait.
+      # Module A: { foo }: ... (foo mandatory/false)
+      # Module B: { foo ? 1 }: ... (foo optional/true)
+      # Merged: foo should be mandatory (false), because A needs it.
+      # Logic: default to true (optional), AND with specific value.
+      # If missing from a module?
+      # Module C: { bar }: ... (foo missing)
+      # If C doesn't ask for foo, it doesn't care.
+      # So we only care about modules that HAVE the key.
+      # If A has foo=false, then foo is false.
+
+      mergeKey =
+        k:
+        let
+          # Extract the isOptional value for key k from all args that have it
+          vals = lib.catAttrs k argsList;
+        in
+        # If any module says it's mandatory (false), then it is mandatory.
+        # So we want to check if ALL are true.
+        lib.all (x: x) vals;
+    in
+    lib.genAttrs allKeys mergeKey;
+
   # mkOptionsModule : GuardedTreeNode -> Module
   mkOptionsModule =
     it:
     let
       modPath = it.modPath;
       options-dot-nix = it.path + "/options.nix";
+      opts = if (isEmptyFile options-dot-nix) then { } else import options-dot-nix;
+      userArgs = if isFunction opts then builtins.functionArgs opts else { };
     in
-    moduleArgs:
-    let
-      rawOptions =
-        let
-          opts = if (isEmptyFile options-dot-nix) then { } else import options-dot-nix;
-        in
-        if isFunction opts then opts moduleArgs else opts;
-      virtualEnableOption = lib.mkEnableOption (concatStringsSep "." modPath);
-      filledOptions = {
-        enable = virtualEnableOption;
+    lib.setFunctionArgs (
+      moduleArgs:
+      let
+        rawOptions = if isFunction opts then opts moduleArgs else opts;
+        virtualEnableOption = lib.mkEnableOption (concatStringsSep "." modPath);
+        filledOptions = {
+          enable = virtualEnableOption;
+        }
+        // rawOptions;
+      in
+      setDefaultModuleLocation options-dot-nix {
+        options = lib.attrsets.setAttrByPath modPath filledOptions;
       }
-      // rawOptions;
-    in
-    setDefaultModuleLocation options-dot-nix {
-      options = lib.attrsets.setAttrByPath modPath filledOptions;
-    };
+    ) userArgs;
 
   # mkDefaultModule : GuardedTreeNode -> Module
   mkDefaultModule =
     it:
-    setDefaultModuleLocation
-      (
-        let
-          default-dot-nix = it.path + "/default.nix";
-          generated-default-dot-nix = it.path + "/.generated.default.nix";
-        in
-        if pathExists default-dot-nix then default-dot-nix else generated-default-dot-nix
-      )
-      (
+    let
+      # Pre-load modules to inspect signatures
+      importedModules = map import it.unguardedConfigPaths;
+
+      # Calculate merged signature
+      # If any module requires an arg (mandatory), the wrapper must require it.
+      userArgs = mergeFnArgs (
+        map (m: if isFunction m then builtins.functionArgs m else { }) importedModules
+      );
+
+      # Wrapper must also accept lib and config for its own logic
+      wrapperArgs = userArgs // {
+        lib = false;
+        config = false;
+      };
+
+      default-dot-nix = it.path + "/default.nix";
+      generated-default-dot-nix = it.path + "/.generated.default.nix";
+      location = if pathExists default-dot-nix then default-dot-nix else generated-default-dot-nix;
+    in
+    setDefaultModuleLocation location (
+      lib.setFunctionArgs (
         args@{
           lib,
           config,
@@ -91,10 +132,11 @@ let
         }:
         {
           config = lib.mkIf (lib.attrsets.getAttrFromPath it.modPath config).enable (
-            lib.mkMerge (map (x: loadModule x args) it.unguardedConfigPaths)
+            lib.mkMerge (map (loadModule args) importedModules)
           );
         }
-      );
+      ) wrapperArgs
+    );
 
   mkGuardedTree =
     rootModulePaths:
