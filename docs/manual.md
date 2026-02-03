@@ -335,6 +335,7 @@ flake-fhs.lib.mkFlake { inherit inputs; } {
 | `layout.roots` | list | `["" "/nix"]` | 项目根目录列表。支持从多个目录聚合内容。 |
 | `nixosConfigurations.specialArgs` | lambda | `_: {}` | 全局传递给所有 hosts 的 specialArgs |
 | `nixosConfigurations.perHost.specialArgs` | lambda | `_: {}` | 针对特定 host 的 extra specialArgs (`hostName -> attrs`) |
+| `flake` | attrs | `{}` | 合并到生成的 flake outputs 中。用于手动扩展或覆盖 FHS 生成的内容。 |
 
 ### 布局配置 (Layout)
 

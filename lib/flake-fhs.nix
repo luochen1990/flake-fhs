@@ -743,8 +743,5 @@ in
         nixosConfigurationsConfig = config.nixosConfigurations;
       };
     in
-    fhsFlake;
-  # 2. TODO: Merge FHS outputs with Manual outputs
-  #recursiveUpdate fhsFlake config.flake;
-  #recursiveUpdate fhsFlake config.perSystem;
+    lib.recursiveUpdate fhsFlake config.flake;
 }
