@@ -423,8 +423,7 @@ flake-fhs.lib.mkFlake { inherit inputs; } {
 | `systems` | list | standard systems | 支持的系统架构列表 (x86_64-linux, aarch64-darwin 等) |
 | `nixpkgs.config` | attrs | `{ allowUnfree = true; }` | 传递给 nixpkgs 的配置 |
 | `layout.roots` | list | `["" "/nix"]` | 项目根目录列表。支持从多个目录聚合内容。 |
-| `nixosConfigurations.specialArgs` | lambda | `_: {}` | 全局传递给所有 hosts 的 specialArgs |
-| `nixosConfigurations.perHost.specialArgs` | lambda | `_: {}` | 针对特定 host 的 extra specialArgs (`hostName -> attrs`) |
+| `systemContext` | lambda | `_: {}` | 系统上下文生成器 (`system -> attrs`)。返回的 attrset 中的 `specialArgs` 将被传递给 `nixosSystem`。支持自动合并。 |
 | `flake` | attrs | `{}` | 合并到生成的 flake outputs 中。用于手动扩展或覆盖 FHS 生成的内容。 |
 
 ### 布局配置 (Layout)

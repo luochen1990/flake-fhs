@@ -413,19 +413,16 @@ let
           description = "Extra flake outputs to merge with FHS outputs";
         };
 
-        nixosConfigurations = {
-          specialArgs = lib.mkOption {
-            type = lib.types.functionTo lib.types.attrs;
-            default = _: { };
-            description = "Extra specialArgs to pass to nixosSystem. Receives system as argument.";
-          };
-
-          perHost = {
-            specialArgs = lib.mkOption {
-              type = lib.types.functionTo lib.types.attrs;
-              default = _: { };
-              description = "Extra specialArgs to pass to nixosSystem. Receives hostName as argument.";
-            };
+        systemContext = lib.mkOption {
+          description = "Context generator dependent on system";
+          default = _: { };
+          type = lib.mkOptionType {
+            name = "systemContext";
+            description = "function system -> attrs";
+            check = lib.isFunction;
+            merge =
+              loc: defs: system:
+              lib.foldl' (acc: def: lib.recursiveUpdate acc (def.value system)) { } defs;
           };
         };
       };
@@ -448,7 +445,7 @@ let
       },
       optionsMode ? "strict",
       layout ? defaultLayout,
-      nixosConfigurationsConfig ? { },
+      systemContext ? _: { },
       ...
     }:
     let
@@ -472,7 +469,7 @@ let
       );
 
       # system related context
-      systemContext =
+      mkSysContext =
         system:
         let
           pkgs = (
@@ -487,6 +484,7 @@ let
             lib = mergedLib;
           };
           mergedLib = flakeFhsLib // preparedLib // lib; # TODO: configurable
+          userCtx = systemContext system;
           specialArgs = {
             inherit
               self
@@ -494,7 +492,8 @@ let
               inputs
               ;
             lib = mergedLib;
-          };
+          }
+          // (userCtx.specialArgs or { });
         in
         {
           inherit
@@ -505,7 +504,8 @@ let
             specialArgs
             inputs
             ;
-        };
+        }
+        // (removeAttrs userCtx [ "specialArgs" ]);
 
       # Per-system output builder
       # eachSystem : (SystemContext -> a) -> Dict System a
@@ -514,9 +514,9 @@ let
         dict supportedSystems (
           system:
           let
-            context = systemContext system;
+            sysContext = mkSysContext system;
           in
-          outputBuilder context
+          outputBuilder sysContext
         );
 
       moduleTree = mkGuardedTree (
@@ -546,7 +546,7 @@ let
       #  templates/   # top-level subdirs marked by templates.nix
 
       packages = eachSystem (
-        context:
+        sysContext:
         listToAttrs (
           builtins.concatMap (
             root:
@@ -561,7 +561,7 @@ let
             in
             builtins.concatMap (
               pkgRoot:
-              evalScopedTree context context.pkgs { } (mkScopedTreeNode {
+              evalScopedTree sysContext sysContext.pkgs { } (mkScopedTreeNode {
                 path = pkgRoot;
                 breadcrumbs = [ ];
               })
@@ -571,14 +571,14 @@ let
       );
 
       apps = eachSystem (
-        context:
+        sysContext:
         let
-          inherit (flakeFhsLib.more context.pkgs) inferMainProgram;
+          inherit (flakeFhsLib.more sysContext.pkgs) inferMainProgram;
         in
         listToAttrs (
           exploreDir roots (it: rec {
             package-dot-nix = it.path + "/package.nix";
-            pkg = context.pkgs.callPackage package-dot-nix { };
+            pkg = sysContext.pkgs.callPackage package-dot-nix { };
             mainProgram = inferMainProgram pkg;
             into = it.depth == 0 && partOf.apps it.name || it.depth >= 1;
             pick = it.depth >= 1 && pathExists package-dot-nix;
@@ -594,7 +594,7 @@ let
       );
 
       devShells = eachSystem (
-        context:
+        sysContext:
         listToAttrs (
           concatLists (
             exploreDir roots (it: rec {
@@ -611,7 +611,7 @@ let
                     if hasSuffix ".nix" fname then
                       {
                         name = lib.removeSuffix ".nix" fname;
-                        value = import (it.path + "/${fname}") context;
+                        value = import (it.path + "/${fname}") sysContext;
                       }
                     else
                       null
@@ -621,7 +621,7 @@ let
                   [
                     {
                       name = concatStringsSep "/" (tail it.breadcrumbs');
-                      value = import (it.path + "/default.nix") context;
+                      value = import (it.path + "/default.nix") sysContext;
                     }
                   ]
                 else
@@ -660,7 +660,7 @@ let
               default-dot-nix = it.path + "/default.nix";
               hasDefault = pathExists default-dot-nix;
               info = if hasDefault then import default-dot-nix else { system = "x86_64-linux"; };
-              context = systemContext info.system;
+              sysContext = mkSysContext info.system;
               modules = [
                 (it.path + "/configuration.nix")
               ]
@@ -678,23 +678,21 @@ let
               #   args = { };
               #   check = true;
               # };
-              hostName = concatStringsSep "/" (tail it.breadcrumbs');
             in
             lib.nixosSystem {
               #lib.nixosSystem {
-              inherit (context)
+              inherit (sysContext)
                 #self
                 system
                 #pkgs
                 lib
                 ;
-              specialArgs =
-                context.specialArgs
-                // nixosConfigurationsConfig.specialArgs info.system
-                // nixosConfigurationsConfig.perHost.specialArgs hostName;
+              specialArgs = sysContext.specialArgs // {
+                hostname = concatStringsSep "/" (tail it.breadcrumbs');
+              };
               modules = modules ++ [
                 #nixpkgs.nixosModules.readOnlyPkgs #TODO: fix this
-                { nixpkgs.pkgs = context.pkgs; }
+                { nixpkgs.pkgs = sysContext.pkgs; }
               ];
             };
         in
@@ -712,7 +710,7 @@ let
         );
 
       checks = eachSystem (
-        context:
+        sysContext:
         let
           # 1. File mode: collect top-level .nix files
           fileChecks = concatFor roots (
@@ -765,7 +763,7 @@ let
         builtins.listToAttrs (
           map (item: {
             name = item.name;
-            value = import item.path context;
+            value = import item.path sysContext;
           }) allChecks
         )
       );
@@ -864,7 +862,7 @@ in
         optionsMode = config.optionsMode;
         nixpkgsConfig = config.nixpkgs.config;
         layout = config.layout;
-        nixosConfigurationsConfig = config.nixosConfigurations;
+        systemContext = config.systemContext;
       };
     in
     lib.recursiveUpdate fhsFlake config.flake;
