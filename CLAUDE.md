@@ -133,9 +133,33 @@ Typical flake.nix for users (showing common options):
 
       # Optional: Source roots
       # layout.roots = [ "" "/nix" ];
+
+      # Optional: Enable Colmena integration
+      # colmena.enable = true;
     };
 }
 ```
+
+## Colmena Integration
+
+The framework provides native support for [Colmena](https://github.com/zhaofengli/colmena), a deployment tool for NixOS.
+
+### Usage
+To enable Colmena support, set `colmena.enable = true` in your `mkFlake` configuration. This will generate a `colmenaHive` output that can be used directly by Colmena.
+
+```nix
+outputs = inputs@{ flake-fhs, ... }:
+  flake-fhs.lib.mkFlake { inherit inputs; } {
+    # ...
+    colmena.enable = true;
+  };
+```
+
+### Features
+- Automatically discovers nodes from `nixosConfigurations` directory structure.
+- Injects `profileName` into module arguments for each node (accessible via `config.profileName`).
+- Sets `deployment.allowLocalDeployment = true` by default.
+- Inherits `nixpkgs` revision info from the flake inputs.
 
 ### mkFlake Architecture
 The `mkFlake` function has been redesigned to use Nix's module system (`lib.evalModules`):

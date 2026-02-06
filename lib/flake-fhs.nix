@@ -16,12 +16,12 @@ let
     concatLists
     concatMap
     elem
-    isFunction
+    head
+    hasAttr
     ;
 
   inherit (lib)
     prepareLib
-    unionFor
     dict
     for
     forFilter
@@ -53,10 +53,10 @@ let
           true
         else
           let
-            head = builtins.head path;
+            h = head path;
           in
-          if builtins.hasAttr head opts && removeAttrs opts [ head ] == { } then
-            checkStrict opts.${head} (tail path)
+          if hasAttr h opts && removeAttrs opts [ h ] == { } then
+            checkStrict opts.${h} (tail path)
           else
             false;
 
@@ -74,7 +74,7 @@ let
           # 1. Validation
           _ =
             if optionsMode == "strict" && !checkStrict opts modPath then
-              throw "Strict mode violation: options in ${toString (file)} must strictly follow the directory structure ${concatStringsSep "." modPath}"
+              throw "Strict mode violation: options in ${toString file} must strictly follow the directory structure ${concatStringsSep "." modPath}"
             else
               null;
 
@@ -310,8 +310,8 @@ let
     };
     nixosConfigurations = {
       subdirs = [
-        "profiles"
         "hosts"
+        "profiles"
         "nixosConfigurations"
       ];
     };
@@ -407,6 +407,16 @@ let
           description = "Directory layout configuration";
         };
 
+        colmena = lib.mkOption {
+          type = lib.types.submodule {
+            options = {
+              enable = lib.mkEnableOption "colmena integration";
+            };
+          };
+          default = { };
+          description = "Colmena configuration";
+        };
+
         flake = lib.mkOption {
           type = lib.types.attrs;
           default = { };
@@ -444,6 +454,9 @@ let
         allowUnfree = true;
       },
       optionsMode ? "strict",
+      colmena ? {
+        enable = false;
+      },
       layout ? defaultLayout,
       systemContext ? _: { },
       ...
@@ -527,6 +540,43 @@ let
           )
         )
       );
+
+      # Shared modules for both NixOS configurations and Colmena
+      sharedModules =
+        moduleTree.unguardedConfigPaths
+        ++ concatFor moduleTree.guardedChildrenNodes (it: [
+          (mkOptionsModule optionsMode it)
+          (mkDefaultModule optionsMode it)
+        ]);
+
+      # Nixpkgs version module
+      nixpkgsVersionModule = {
+        system.nixos.revision = nixpkgs.rev or nixpkgs.dirtyRev or null;
+        system.nixos.versionSuffix =
+          if nixpkgs ? lastModifiedDate && nixpkgs ? shortRev then
+            ".${builtins.substring 0 8 nixpkgs.lastModifiedDate}.${nixpkgs.shortRev}"
+          else
+            "";
+      };
+
+      # Discover hosts
+      validHosts = exploreDir roots (it: rec {
+        configuration-dot-nix = it.path + "/configuration.nix";
+        marked = pathExists configuration-dot-nix;
+        into = it.depth == 0 && partOf.nixosConfigurations it.name;
+        pick = it.depth >= 1 && marked;
+
+        # Read system info
+        default-dot-nix = it.path + "/default.nix";
+        hasDefault = pathExists default-dot-nix;
+        info = if hasDefault then import default-dot-nix else { system = "x86_64-linux"; };
+
+        out = {
+          name = concatStringsSep "/" (tail it.breadcrumbs');
+          path = it.path;
+          inherit info;
+        };
+      });
     in
     {
       # Generate all flake outputs
@@ -534,7 +584,7 @@ let
       # outputs:
       #  pkgs/        # subdirs marked by package.nix
       #  modules/     # unguarded & guarded by options.nix
-      #  profiles/    # shared & marked by configuration.nix
+      #  hosts/       # marked by configuration.nix
       #  shells/      # top-level files & subdirs marked by shell.nix
       #  apps/        # top-level files & subdirs marked by default.nix
       #  utils/       # more/ and other .nix files
@@ -634,7 +684,7 @@ let
           concatFor moduleTree.guardedChildrenNodes (it: [
             {
               name = (concatStringsSep "." it.modPath) + ".options";
-              value = (mkOptionsModule optionsMode it);
+              value = mkOptionsModule optionsMode it;
             }
             {
               name = (concatStringsSep "." it.modPath) + ".config";
@@ -648,62 +698,31 @@ let
           };
         };
 
-      nixosConfigurations =
-        let
-          mkProfile =
-            it:
-            let
-              default-dot-nix = it.path + "/default.nix";
-              hasDefault = pathExists default-dot-nix;
-              info = if hasDefault then import default-dot-nix else { system = "x86_64-linux"; };
-              sysContext = mkSysContext info.system;
-              modules = [
-                (it.path + "/configuration.nix")
-              ]
-              ++ moduleTree.unguardedConfigPaths
-              ++ concatFor moduleTree.guardedChildrenNodes (it: [
-                # Options module (always imported)
-                (mkOptionsModule optionsMode it)
-                # Config module (guarded by enable option)
-                (mkDefaultModule optionsMode it)
-              ]);
-              # TODO: partial load
-              # config = lib.evalModules {
-              #   modules = [ ];
-              #   specialArgs = { };
-              #   args = { };
-              #   check = true;
-              # };
-            in
-            lib.nixosSystem {
-              #lib.nixosSystem {
+      nixosConfigurations = listToAttrs (
+        map (
+          host:
+          let
+            sysContext = mkSysContext host.info.system;
+            modules = [ (host.path + "/configuration.nix") ] ++ sharedModules;
+          in
+          {
+            name = host.name;
+            value = lib.nixosSystem {
               inherit (sysContext)
-                #self
                 system
-                #pkgs
                 lib
                 ;
               specialArgs = sysContext.specialArgs // {
-                hostname = concatStringsSep "/" (tail it.breadcrumbs');
+                hostname = host.name;
               };
               modules = modules ++ [
-                #nixpkgs.nixosModules.readOnlyPkgs #TODO: fix this
                 { nixpkgs.pkgs = sysContext.pkgs; }
+                nixpkgsVersionModule
               ];
             };
-        in
-        listToAttrs (
-          exploreDir roots (it: rec {
-            configuration-dot-nix = it.path + "/configuration.nix";
-            marked = pathExists configuration-dot-nix;
-            into = it.depth == 0 && partOf.nixosConfigurations it.name;
-            pick = it.depth >= 1 && marked;
-            out = {
-              name = concatStringsSep "/" (tail it.breadcrumbs');
-              value = mkProfile it;
-            };
-          })
-        );
+          }
+        ) validHosts
+      );
 
       checks = eachSystem (
         sysContext:
@@ -815,13 +834,56 @@ let
           else
             #NOTE: the treefmt.nix format is different here
             #DOC: https://nixos.org/manual/nixpkgs/stable/#opt-treefmt-settings
-            pkgs.treefmt.withConfig { settings = (import treefmtNix); }
+            pkgs.treefmt.withConfig { settings = import treefmtNix; }
         else if pathExists treefmtToml then
           pkgs.treefmt.withConfig { configFile = treefmtToml; }
         else
           pkgs.treefmt
       );
-    };
+    }
+    // (
+      if colmena.enable then
+        {
+          colmenaHive = inputs.colmena.lib.makeHive (
+            {
+              meta = {
+                nixpkgs = (mkSysContext (head supportedSystems)).pkgs;
+                nodeNixpkgs = listToAttrs (
+                  map (host: {
+                    name = host.name;
+                    value = (mkSysContext host.info.system).pkgs;
+                  }) validHosts
+                );
+                nodeSpecialArgs = listToAttrs (
+                  map (
+                    host:
+                    let
+                      sysContext = mkSysContext host.info.system;
+                    in
+                    {
+                      name = host.name;
+                      value = sysContext.specialArgs // {
+                        hostname = host.name;
+                      };
+                    }
+                  ) validHosts
+                );
+              };
+            }
+            // listToAttrs (
+              map (host: {
+                name = host.name;
+                value = {
+                  deployment.allowLocalDeployment = true;
+                  imports = [ (host.path + "/configuration.nix") ] ++ sharedModules ++ [ nixpkgsVersionModule ];
+                };
+              }) validHosts
+            )
+          );
+        }
+      else
+        { }
+    );
 in
 {
   # Main mkFlake function
@@ -856,6 +918,7 @@ in
 
         supportedSystems = config.systems;
         optionsMode = config.optionsMode;
+        colmena = config.colmena;
         nixpkgsConfig = config.nixpkgs.config;
         layout = config.layout;
         systemContext = config.systemContext;
