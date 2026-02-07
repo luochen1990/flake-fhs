@@ -60,11 +60,13 @@ The framework uses `callPackage` to build packages. You can customize the `callP
 ### Key Components
 
 - **lib/**: Core utility library with Haskell-inspired functional programming patterns
-  - `lib/prepare-lib.nix`: Library loading and layering system
-  - `lib/dict.nix`: Dictionary operations and higher-order functions
-  - `lib/list.nix`: List operations
-  - `lib/file.nix`: File system operations
-  - `lib/flake-fhs.nix`: Core `mkFlake` implementation
+  - `lib/flake-fhs.nix`: Entry point wrapper for `mkFlake`
+  - `lib/fhs-core.nix`: Core implementation (`mkFlakeCore`)
+  - `lib/fhs-modules.nix`: Module system logic
+  - `lib/fhs-pkgs.nix`: Package loading logic
+  - `lib/fhs-config.nix`: Configuration options
+  - `lib/pkg-tools.nix`: Package helper utilities
+  - `lib/dict.nix`, `lib/list.nix`, `lib/file.nix`: Fundamental utilities
 
  - **templates/**: Project templates for different use cases
    - `std`: Standard template with complete nixos-config and flake outputs 1:1 naming
@@ -178,8 +180,8 @@ outputs = inputs@{ flake-fhs, ... }:
 The `mkFlake` function has been redesigned to use Nix's module system (`lib.evalModules`):
 - **First parameter**: Context including `inputs`, `self`, `nixpkgs`, `lib`
 - **Second parameter**: Configuration module with type-safe options
-- **Core implementation**: `mkFlakeCore` contains the actual flake generation logic
-- **Configuration options**: Defined in `flakeFhsOptions` submodule with full type checking
+- **Core implementation**: `mkFlakeCore` (in `lib/fhs-core.nix`) contains the actual flake generation logic
+- **Configuration options**: Defined in `flakeFhsOptions` (in `lib/fhs-config.nix`) with full type checking
 
 ## Development Guidelines
 
@@ -195,7 +197,8 @@ The `mkFlake` function has been redesigned to use Nix's module system (`lib.eval
 - **Type Safety**: Leverages Nix's type system extensively
 
 ### File Organization
-- Core logic in `lib/flake-fhs.nix`
+- Core logic split across `lib/fhs-*.nix` files (`core`, `modules`, `pkgs`, `config`)
+- Entry point in `lib/flake-fhs.nix`
 - Shared utilities in `lib/` directory
 - Templates in `templates/` with embedded documentation
 - Comprehensive manual in `docs/manual.md`
