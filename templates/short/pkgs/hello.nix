@@ -1,8 +1,5 @@
-{
-  lib,
-  writeShellScriptBin,
-}:
+{ writeShellScriptBin, curl }:
 
-writeShellScriptBin "hello-custom" ''
-  echo "Hello world!"
+writeShellScriptBin "weather" ''
+  ${curl}/bin/curl wttr.in
 ''

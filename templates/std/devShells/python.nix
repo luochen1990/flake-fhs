@@ -1,14 +1,17 @@
 { pkgs, ... }:
 
 pkgs.mkShell {
-  name = "python-development-shell";
+  name = "python-env";
 
-  buildInputs = with pkgs; [
-    python3
+  packages = [
+    (pkgs.python3.withPackages (
+      ps: with ps; [
+        requests
+      ]
+    ))
   ];
 
   shellHook = ''
-    echo "🐍 Python Development Environment Ready!"
-    echo "Available commands: python3"
+    echo "Python environment loaded!"
   '';
 }

@@ -1,8 +1,5 @@
-{
-  lib,
-  writeShellScriptBin,
-}:
+{ writeShellScriptBin, curl }:
 
-writeShellScriptBin "hello-fhs" ''
-  echo "Hello from Flake FHS package hello-fhs-1.0.0!"
+writeShellScriptBin "weather" ''
+  ${curl}/bin/curl wttr.in
 ''

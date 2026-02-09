@@ -1,27 +1,20 @@
 {
   config,
-  lib,
   pkgs,
-  modulesPath,
-  utils,
   ...
 }:
 
 {
   imports = [
-    # Modules will be automatically discovered and imported from nixosModules/
-    # The my-service module will be available here
+    # Modules are automatically discovered from nixosModules/
   ];
 
-  # Enable the custom service with custom configuration
-  services.my-service = {
+  # Enable our custom web-server module
+  services.web-server = {
     enable = true;
-    port = 9090;
+    port = 8080;
     openFirewall = true;
-    environment = {
-      LOG_LEVEL = "debug";
-      DATA_DIR = "/var/lib/myservice";
-    };
+    content = "<h1>Welcome to my laptop!</h1><p>Configured via Flake FHS.</p>";
   };
 
   # Basic system configuration
@@ -31,55 +24,23 @@
     fsType = "ext4";
   };
 
-  # System packages from our flake
-  environment.systemPackages = with pkgs; [
-    git
-    curl
-    wget
-
-    # Include packages from our flake (if they exist)
-    # utils.packages.hello or similar would be available here
-  ];
-
-  # Networking configuration
   networking.hostName = "laptop";
   networking.networkmanager.enable = true;
 
-  # Firewall configuration
-  networking.firewall.enable = true;
+  environment.systemPackages = with pkgs; [
+    git
+    curl
+    vim
+  ];
 
-  # Enable SSH
-  services.openssh.enable = true;
-  services.openssh.settings = {
-    PermitRootLogin = "no";
-    PasswordAuthentication = false;
-  };
-
-  # Create a demo user
+  # Simple user configuration
   users.users.demo = {
     isNormalUser = true;
-    description = "Demo user";
     extraGroups = [
       "wheel"
       "networkmanager"
     ];
-    openssh.authorizedKeys.keys = [
-      # Add your SSH public keys here
-      # "ssh-rsa AAAAB3NzaC1yc2EAAAA..."
-    ];
   };
-
-  # Create a welcome message
-  users.motd = ''
-    Welcome to FlakeFHS Example!
-
-    This system is configured using Flake FHS with:
-    - Custom service on port ${toString config.services.my-service.port}
-    - Development tools and utilities
-    - Security hardening
-
-    Run 'nix run .#status' to see available apps and services.
-  '';
 
   system.stateVersion = "24.11";
 }

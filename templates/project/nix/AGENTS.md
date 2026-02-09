@@ -1,0 +1,1 @@
+This nix flake is initialized via Flake FHS, flake outputs are auto generated from the directory structure of the nix/ subdirectory, Read the [Manual of Flake FHS](https://flake-fhs.lambda.lc/) if you need more details.

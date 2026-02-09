@@ -3,8 +3,13 @@
 pkgs.mkShell {
   name = "python-dev";
 
-  buildInputs = with pkgs; [
-    python3
+  packages = [
+    (pkgs.python3.withPackages (
+      ps: with ps; [
+        requests
+        numpy
+      ]
+    ))
   ];
 
   shellHook = ''
