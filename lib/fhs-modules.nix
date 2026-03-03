@@ -162,15 +162,21 @@ let
       path,
     }:
     let
+      # Check if this directory has a default.nix
+      default-dot-nix = path + "/default.nix";
+      hasDefault = pathExists default-dot-nix;
+      
       unguardedConfigPaths = concatLists (
         exploreDir [ path ] (it: rec {
           options-dot-nix = it.path + "/options.nix";
           default-dot-nix = it.path + "/default.nix";
           guarded = pathExists options-dot-nix;
           defaulted = pathExists default-dot-nix;
-          into = !(guarded || defaulted);
-          # Pick non-guarded directories (guarded ones will be handled separately)
-          pick = !guarded;
+          # If parent has default.nix, don't enter subdirectories (let default.nix handle it)
+          # Otherwise, enter non-guarded and non-defaulted directories
+          into = !hasDefault && !(guarded || defaulted);
+          # Pick non-guarded directories (unless parent has default.nix)
+          pick = !guarded && !hasDefault;
           out =
             if defaulted then
               [ default-dot-nix ]
