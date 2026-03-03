@@ -143,9 +143,14 @@ let
     };
 
   # mkDefaultModule : Config -> GuardedTreeNode -> Module
-  mkDefaultModule = config: it: {
-    imports = map (warpModule config it.modPath) it.unguardedConfigPaths;
-  };
+  mkDefaultModule = config: it: 
+    let
+      default-dot-nix = it.path + "/default.nix";
+      hasDefault = pathExists default-dot-nix;
+      defaultImport = if hasDefault then [ default-dot-nix ] else [];
+    in {
+      imports = defaultImport ++ map (warpModule config it.modPath) it.unguardedConfigPaths;
+    };
 
   # ================================================================
   # Tree Traversal (Guarded)
@@ -164,9 +169,8 @@ let
           guarded = pathExists options-dot-nix;
           defaulted = pathExists default-dot-nix;
           into = !(guarded || defaulted);
-          # Only pick if not guarded (guarded directories will be handled by guardedChildrenNodes)
-          # If defaulted but not guarded, pick the default.nix
-          pick = defaulted && !guarded;
+          # Pick non-guarded directories (guarded ones will be handled separately)
+          pick = !guarded;
           out =
             if defaulted then
               [ default-dot-nix ]
