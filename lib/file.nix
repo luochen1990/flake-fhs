@@ -194,16 +194,19 @@ rec {
 
   # importUnguardedFiles : String -> Path -> [Path]
   # 
-  # 收集目录下的文件，但尊重 guarded module 边界（不穿透有 options.nix 的目录）
+  # 收集目录下的文件，尊重 guarded module 边界
   # 
   # 行为:
   # - 收集当前目录下匹配后缀的文件
   # - 对于子目录:
-  #   - 如果有 options.nix (guarded module)，跳过（不穿透）
-  #   - 如果有 default.nix，引入它
-  #   - 否则，递归处理
+  #   - 如果有 options.nix (guarded module):
+  #     - 如果有 default.nix，引入它
+  #     - 如果没有 default.nix，递归处理它的内容（因为它的虚拟 default.nix 会被 parentHasDefault 机制忽略）
+  #   - 如果没有 options.nix:
+  #     - 如果有 default.nix，引入它
+  #     - 否则，递归处理
   # 
-  # 这个函数用于 default.nix 中，避免意外穿透子 guarded module
+  # 这个函数用于 default.nix 中，与 flake-fhs 的 parentHasDefault 机制配合工作
   # 
   # 示例:
   #   # bedrock/default.nix
@@ -239,10 +242,16 @@ rec {
             defaultExists = builtins.pathExists (subPath + "/default.nix");
           in
           if optionsExists then
-            # guarded module，跳过（不穿透）
-            null
+            # guarded module
+            if defaultExists then
+              # 有 default.nix，引入它（让 default.nix 控制引入）
+              [ subPath ]
+            else
+              # 没有 default.nix，递归处理它的内容
+              # 因为 parentHasDefault=true 时，flake-fhs 不会为它生成虚拟 default.nix
+              importUnguardedFiles suffix subPath
           else if defaultExists then
-            # 有 default.nix，引入它
+            # 有 default.nix（非 guarded），引入它
             [ subPath ]
           else
             # 普通 unguarded 目录，递归

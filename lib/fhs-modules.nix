@@ -77,10 +77,11 @@
 # ```
 #
 # `importUnguardedFiles` 与 `findFilesRec` 的关键区别:
-# - `findFilesRec` 会递归穿透所有子目录，包括 guarded module
-# - `importUnguardedFiles` 会尊重 guarded module 边界:
-#   - 遇到有 options.nix 的目录（guarded module）时跳过
-#   - 遇到有 default.nix 的目录时引入它
+# - `findFilesRec` 会递归穿透所有子目录，可能导致重复引入
+# - `importUnguardedFiles` 与 `parentHasDefault` 机制配合:
+#   - 遇到有 default.nix 的目录时引入它（让 default.nix 控制引入）
+#   - 遇到没有 default.nix 的 guarded module 时，递归处理它的内容
+#     （因为 parentHasDefault=true 时，flake-fhs 不会为它生成虚拟 default.nix）
 #   - 其他目录递归处理
 #
 # ## 4. parentHasDefault 传递机制
@@ -94,10 +95,18 @@
 # ├── default.nix              # 使用 importUnguardedFiles ".mod.nix"
 # ├── prelude.mod.nix          # 由 default.nix 引入
 # └── network/                 # 有 options.nix (guarded)，无 default.nix
-#     ├── options.nix          # 跳过（不穿透 guarded module）
+#     ├── options.nix          # 跳过（不引入 options.nix）
+#     ├── core.mod.nix         # 由 bedrock/default.nix 递归引入
 #     └── adguard/
-#         └── service.mod.nix  # 由 bedrock/default.nix 引入
+#         └── service.mod.nix  # 由 bedrock/default.nix 递归引入
 # ```
+#
+# 在这个例子中:
+# - `bedrock/default.nix` 使用 `importUnguardedFiles` 收集 `.mod.nix` 文件
+# - `network/` 是 guarded module，没有 default.nix
+# - `importUnguardedFiles` 会递归进入 `network/`，收集 `core.mod.nix` 和 `adguard/service.mod.nix`
+# - `bedrock/network/` 的虚拟 default.nix 为空（因为 parentHasDefault=true）
+# - 结果：每个文件只被引入一次
 #
 # 在这个例子中:
 # - `bedrock/default.nix` 使用 `importUnguardedFiles` 收集 `.mod.nix` 文件
