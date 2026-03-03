@@ -92,6 +92,16 @@ The framework implements an advanced module loading system:
 2. All guarded directory `options.nix` files are imported
 3. Only enabled guarded modules (enable = true) import their config files
 
+### Module Output Structure
+- **Individual Module Outputs**: Each guarded module generates two separate outputs:
+  - `<name>.options`: Contains only the `options.nix` file (options declarations)
+  - `<name>.config`: Contains the module's configuration files (applied only when enabled)
+- **Default Module Export**: The `nixosModules.default` output automatically includes:
+  - All unguarded toplevel modules
+  - All guarded modules (both their options and configurations)
+  - This allows users to import all modules with a single `imports = [ flake.nixosModules.default ];`
+  - Guarded modules' configurations are wrapped with `mkIf enable` (default: false), so they don't take effect unless explicitly enabled
+
 ### Options Processing Modes
 The `options.nix` processing behavior can be configured via `optionsMode`:
 - **strict** (default): No automatic nesting. Enforces that defined options strictly match the directory structure.

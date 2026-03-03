@@ -69,8 +69,7 @@ let
       system = pkgs.stdenv.hostPlatform.system;
       modules = [
         flake.nixosModules.default
-      ]
-      ++ (lib.attrValues (removeAttrs flake.nixosModules [ "default" ]));
+      ];
     };
 
   sysAuto = evalSys flakeAuto;

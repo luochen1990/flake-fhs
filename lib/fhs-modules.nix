@@ -234,7 +234,12 @@ let
         )
         // {
           default = {
-            imports = moduleTree.unguardedConfigPaths;
+            imports =
+              moduleTree.unguardedConfigPaths
+              ++ concatFor moduleTree.guardedChildrenNodes (it: [
+                (mkOptionsModule args it)
+                (mkDefaultModule args it)
+              ]);
           };
         };
     };
