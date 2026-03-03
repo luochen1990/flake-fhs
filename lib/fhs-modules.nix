@@ -156,15 +156,32 @@ let
   # Tree Traversal (Guarded)
   # ================================================================
 
+  # mkGuardedTreeNode : { modPath, path, parentHasDefault } -> GuardedTreeNode
+  # 
+  # GuardedTreeNode 表示一个有 options.nix 的 guarded module
+  # 
+  # default.nix 处理逻辑:
+  # - 如果 guarded module 有 default.nix, 则使用它
+  # - 如果 guarded module 没有 default.nix, 则创建一个虚拟的 default.nix
+  #   - 虚拟 default.nix 会递归引入该目录下所有 unguarded 的 .nix 文件
+  #   - 但是, 如果父目录(或任何祖先)有 default.nix, 则虚拟 default.nix 为空
+  #     (因为父目录的 default.nix 会负责引入所有子目录的内容)
+  #
   mkGuardedTreeNode =
     {
       modPath,
       path,
+      parentHasDefault ? false,
     }:
     let
       # Check if this directory has a default.nix
       default-dot-nix = path + "/default.nix";
       hasDefault = pathExists default-dot-nix;
+      
+      # 如果父目录有 default.nix, 则不需要收集任何 unguarded 文件
+      # 因为父目录的 default.nix 会负责引入所有内容
+      # 如果当前目录有 default.nix, 也不需要收集, 因为会直接使用 default.nix
+      needCollectUnguarded = !parentHasDefault && !hasDefault;
       
       unguardedConfigPaths = concatLists (
         exploreDir [ path ] (it: rec {
@@ -172,11 +189,11 @@ let
           default-dot-nix = it.path + "/default.nix";
           guarded = pathExists options-dot-nix;
           defaulted = pathExists default-dot-nix;
-          # If parent has default.nix, don't enter subdirectories (let default.nix handle it)
-          # Otherwise, enter non-guarded and non-defaulted directories
-          into = !hasDefault && !(guarded || defaulted);
-          # Pick non-guarded directories (unless parent has default.nix)
-          pick = !guarded && !hasDefault;
+          # 只有当需要收集时, 才进入子目录
+          # 进入非-guarded 且非-defaulted 的目录
+          into = needCollectUnguarded && !(guarded || defaulted);
+          # 收集非-guarded 的目录(当需要收集时)
+          pick = !guarded && needCollectUnguarded;
           out =
             if defaulted then
               [ default-dot-nix ]
@@ -195,6 +212,8 @@ let
         out = mkGuardedTreeNode {
           modPath = it.breadcrumbs';
           path = it.path;
+          # 传递给子 guarded module: 如果当前目录或任何祖先有 default.nix
+          parentHasDefault = hasDefault || parentHasDefault;
         };
       });
     in
@@ -215,6 +234,7 @@ let
         mkGuardedTreeNode {
           inherit path;
           modPath = [ ];
+          parentHasDefault = false;
         }
       ) rootModulePaths;
     in
