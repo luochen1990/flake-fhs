@@ -65,28 +65,47 @@
 # ```
 # - 系统会自动创建虚拟 default.nix 引入所有 .nix 文件
 #
-# ## 3. parentHasDefault 传递机制
+# ## 3. importUnguardedFiles 工具函数
 #
-# 为了避免重复引入，使用 `parentHasDefault` 参数跟踪祖先状态:
+# 当在 default.nix 中需要收集文件时，应该使用 `importUnguardedFiles` 而不是 `findFilesRec`:
+#
+# ```nix
+# # bedrock/default.nix
+# { tools, ... }: {
+#   imports = tools.importUnguardedFiles ".mod.nix" ./.;
+# }
+# ```
+#
+# `importUnguardedFiles` 与 `findFilesRec` 的关键区别:
+# - `findFilesRec` 会递归穿透所有子目录，包括 guarded module
+# - `importUnguardedFiles` 会尊重 guarded module 边界:
+#   - 遇到有 options.nix 的目录（guarded module）时跳过
+#   - 遇到有 default.nix 的目录时引入它
+#   - 其他目录递归处理
+#
+# ## 4. parentHasDefault 传递机制
+#
+# 当使用 `importUnguardedFiles` 时，系统通过 `parentHasDefault` 参数跟踪祖先状态，
+# 确保子 guarded module 的虚拟 default.nix 不会重复引入文件:
 #
 # ```
 # bedrock/                     # 有 options.nix (guarded) + default.nix
 # ├── options.nix
-# ├── default.nix              # 引入所有 .mod.nix 文件
+# ├── default.nix              # 使用 importUnguardedFiles ".mod.nix"
 # ├── prelude.mod.nix          # 由 default.nix 引入
 # └── network/                 # 有 options.nix (guarded)，无 default.nix
-#     ├── options.nix
+#     ├── options.nix          # 跳过（不穿透 guarded module）
 #     └── adguard/
 #         └── service.mod.nix  # 由 bedrock/default.nix 引入
 # ```
 #
 # 在这个例子中:
-# - `bedrock/` 有 `default.nix`，所以 `bedrock.config` 使用它
-# - `bedrock/network/` 是子 guarded module，它的 `parentHasDefault = true`
-# - 因此 `bedrock/network/` 的虚拟 default.nix 为空（不收集任何文件）
-# - `adguard/service.mod.nix` 只被 `bedrock/default.nix` 引入一次
+# - `bedrock/default.nix` 使用 `importUnguardedFiles` 收集 `.mod.nix` 文件
+# - `network/` 是 guarded module，`importUnguardedFiles` 会跳过它（不穿透）
+# - `bedrock/network/` 的虚拟 default.nix 为空（因为 parentHasDefault=true）
+# - `adguard/service.mod.nix` 只被引入一次
 #
-# ## 4. 输出结构
+# ## 5. 输出结构
 #
 # 对于每个 guarded module，生成:
 # - `nixosModules.<modPath>.options` - 选项声明

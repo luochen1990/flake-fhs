@@ -192,6 +192,67 @@ rec {
   scanFilesBySuffix =
     suffix: dir: if builtins.pathExists dir then (findFilesRec (hasSuffix suffix) dir) else [ ];
 
+  # importUnguardedFiles : String -> Path -> [Path]
+  # 
+  # 收集目录下的文件，但尊重 guarded module 边界（不穿透有 options.nix 的目录）
+  # 
+  # 行为:
+  # - 收集当前目录下匹配后缀的文件
+  # - 对于子目录:
+  #   - 如果有 options.nix (guarded module)，跳过（不穿透）
+  #   - 如果有 default.nix，引入它
+  #   - 否则，递归处理
+  # 
+  # 这个函数用于 default.nix 中，避免意外穿透子 guarded module
+  # 
+  # 示例:
+  #   # bedrock/default.nix
+  #   { tools, ... }: {
+  #     imports = tools.importUnguardedFiles ".mod.nix" ./.;
+  #   }
+  #
+  importUnguardedFiles =
+    suffix: root:
+    let
+      d = readDir root;
+      names = attrNames d;
+      
+      # forFilter 的本地实现
+      filterMap = f: xs: filter (x: x != null) (map f xs);
+      
+      # 收集当前目录下的文件
+      currentFiles = filterMap (
+        name:
+        if d.${name} == "regular" && hasSuffix suffix name then
+          root + "/${name}"
+        else
+          null
+      ) names;
+      
+      # 处理子目录
+      subDirImports = filterMap (
+        name:
+        if d.${name} == "directory" && !isHidden name then
+          let
+            subPath = root + "/${name}";
+            optionsExists = builtins.pathExists (subPath + "/options.nix");
+            defaultExists = builtins.pathExists (subPath + "/default.nix");
+          in
+          if optionsExists then
+            # guarded module，跳过（不穿透）
+            null
+          else if defaultExists then
+            # 有 default.nix，引入它
+            [ subPath ]
+          else
+            # 普通 unguarded 目录，递归
+            importUnguardedFiles suffix subPath
+        else
+          null
+      ) names;
+    in
+    currentFiles ++ concatLists subDirImports;
+
   # trimPath : Path -> String
   trimPath =
     path:
