@@ -108,7 +108,10 @@ Module Types (Mutually Exclusive)
 ### Module Loading Rules
 1. **Guarded Modules**: Directories with `options.nix`
    - Auto-generates `enable` option if not manually defined
-   - Files matching the configured suffix (default: `.nix`) are config files (wrapped with `mkIf enable`)
+   - Config files (matching suffix, default `.nix`) are **recursively collected** from:
+     - Current directory
+     - All non-guarded subdirectories (regardless of `default.nix` presence)
+   - All collected config files are wrapped with `mkIf enable`
    - Nested guarded modules check ALL parent enables (not just immediate parent)
    - **Conflict**: Cannot have both `options.nix` and `default.nix` in the same directory
 

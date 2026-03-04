@@ -18,7 +18,10 @@ The flake-fhs module system automatically discovers and loads NixOS modules from
 
 **Features**:
 - Auto-generates `enable` option
-- Config files wrapped with `mkIf enable`
+- Config files (matching suffix) are **recursively collected** from:
+  - Current directory
+  - All non-guarded subdirectories (regardless of `default.nix` presence)
+- All config files wrapped with `mkIf enable`
 - Supports nesting with parent enable checks
 
 **Directory Structure**:
@@ -27,7 +30,8 @@ modules/
 └── my-feature/
     ├── options.nix    # Required: option definitions
     ├── config.nix     # Optional: configuration (wrapped with mkIf)
-    └── setup.nix      # Optional: more config files
+    └── sub-feature/   # Optional: subdirectory without options.nix
+        └── setup.nix  # Also collected and wrapped with mkIf
 ```
 
 **Example `options.nix`**:

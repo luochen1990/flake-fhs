@@ -125,11 +125,35 @@ let
 
       # 收集 unguarded 配置文件 (仅对没有 default.nix 的 guarded 模块)
       # 使用配置的 suffix 来过滤文件
+      # 递归收集当前目录和所有非-guarded 子目录中的配置文件 (无论是否有 default.nix)
       unguardedFiles =
         if hasOptions && !hasDefault then
-          forFilter files (
-            f: if hasSuffix suffix f && f != "options.nix" && f != "scope.nix" then path + "/${f}" else null
-          )
+          let
+            # 当前目录的配置文件
+            currentFiles = forFilter files (
+              f: if hasSuffix suffix f && f != "options.nix" && f != "scope.nix" then path + "/${f}" else null
+            );
+
+            # 递归收集非-guarded 子目录中的配置文件
+            # 注意：只跳过 guarded 目录，不跳过有 default.nix 的目录
+            subFiles = exploreDir [ path ] (it: rec {
+              options-dot-nix = it.path + "/options.nix";
+              guarded = pathExists options-dot-nix;
+
+              # 只进入非-guarded 的目录
+              into = !guarded;
+              # 收集所有非-guarded 目录中的配置文件
+              pick = !guarded;
+
+              currentFiles = lsFiles it.path;
+              configFiles = forFilter currentFiles (
+                f: if hasSuffix suffix f && f != "options.nix" && f != "scope.nix" then it.path + "/${f}" else null
+              );
+
+              out = configFiles;
+            });
+          in
+          currentFiles ++ concatLists subFiles
         else
           [ ];
 
