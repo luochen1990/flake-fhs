@@ -77,36 +77,77 @@ The framework uses `callPackage` to build packages. You can customize the `callP
 
 ## Module System Architecture
 
-The framework implements an advanced module loading system:
+The framework implements a module system with **three mutually exclusive module types**:
 
-- **Guarded vs Unguarded Modules**: Directories containing `options.nix` are "guarded" (default disabled), others are "unguarded" (default enabled)
-- **Partial Loading**: Implements performance optimization by loading only necessary modules
-- **Auto-enable Options**: Automatically generates enable options for guarded modules (if not manually defined)
-- **Module Discovery**: Automatically discovers and imports modules based on directory structure
-- **Option Nesting**: Automatically nests options under module paths (default behavior, configurable via `optionsMode`) (e.g. `services/web-server/options.nix` -> `options.services.web-server.*`) and auto-generates `enable` option (if missing)
+### Module Types
+
+```
+Module Types (Mutually Exclusive)
+│
+├─ Guarded Directory Module
+│  ├─ Identifier: Directory contains options.nix
+│  ├─ Features:
+│  │  ├─ Auto-generates enable option
+│  │  ├─ Config files wrapped with mkIf enable
+│  │  └─ Nested modules check ALL parent enables
+│  ├─ Constraints: Cannot have default.nix (conflict error)
+│  └─ Use Case: Optional feature modules
+│
+├─ Traditional Directory Module
+│  ├─ Identifier: Directory contains default.nix (no options.nix)
+│  ├─ Features: Direct export, no enable mechanism
+│  ├─ Constraints: No nesting (subdirs with default.nix are NOT recognized)
+│  └─ Use Case: Configuration sets, complex modules
+│
+└─ Single File Module
+   ├─ Identifier: Standalone .nix file
+   ├─ Features: Direct export, no enable mechanism
+   └─ Use Case: Simple modules
+```
 
 ### Module Loading Rules
-1. All unguarded directory modules are imported
-   - If a directory contains `default.nix`, it is treated as a leaf module (recursion stops) and only `default.nix` is imported
-   - Otherwise, all `.nix` files in the directory are imported and subdirectories are recursed
-2. All guarded directory `options.nix` files are imported
-3. Only enabled guarded modules (enable = true) import their config files
+1. **Guarded Modules**: Directories with `options.nix`
+   - Auto-generates `enable` option if not manually defined
+   - All other `.nix` files in the directory are config files (wrapped with `mkIf enable`)
+   - Nested guarded modules check ALL parent enables (not just immediate parent)
+   - **Conflict**: Cannot have both `options.nix` and `default.nix` in the same directory
+
+2. **Traditional Modules**: Directories with `default.nix` (no `options.nix`)
+   - Directly exported, no enable mechanism
+   - **No nesting**: Subdirectories with `default.nix` are NOT recognized as modules
+
+3. **Single File Modules**: Standalone `.nix` files
+   - Directly exported, no enable mechanism
+   - Found recursively in all non-guarded, non-traditional directories
 
 ### Module Output Structure
-- **Individual Module Outputs**: Each guarded module generates two separate outputs:
-  - `<name>.options`: Contains only the `options.nix` file (options declarations)
-  - `<name>.config`: Contains the module's configuration files (applied only when enabled)
-- **Default Module Export**: The `nixosModules.default` output automatically includes:
-  - All unguarded toplevel modules
-  - All guarded modules (both their options and configurations)
-  - This allows users to import all modules with a single `imports = [ flake.nixosModules.default ];`
-  - Guarded modules' configurations are wrapped with `mkIf enable` (default: false), so they don't take effect unless explicitly enabled
+- **Individual Module Outputs**: Each module generates a single output:
+  - `nixosModules.<modPath>`: The complete module (options + config)
+  - Example: `modules/services/web-server/` → `nixosModules.services.web-server`
 
-### Options Processing Modes
-The `options.nix` processing behavior can be configured via `optionsMode`:
-- **strict** (default): No automatic nesting. Enforces that defined options strictly match the directory structure.
-- **auto**: Automatically nests options under the directory path (e.g. `foo/options.nix` -> `options.foo.*`) and auto-generates `enable` option.
-- **free**: No automatic nesting. Allows arbitrary option definitions.
+- **Default Module Export**: `nixosModules.default` includes ALL modules:
+  - All guarded modules (with their enable guards)
+  - All traditional modules
+  - All single file modules
+  - Allows importing all modules with: `imports = [ flake.nixosModules.default ];`
+
+### Nested Guarded Modules
+When guarded modules are nested, child modules' configs check ALL parent enables:
+```
+modules/
+└── network/              # network.enable
+    ├── options.nix
+    ├── config.nix
+    └── services/
+        └── web/          # network.enable && network.services.web.enable
+            ├── options.nix
+            └── config.nix
+```
+
+### Strict Mode Only
+Options must strictly match the directory structure. The `optionsMode` configuration has been removed.
+- `modules/foo/options.nix` must define options under `options.foo.*`
+- `modules/foo/bar/options.nix` must define options under `options.foo.bar.*`
 
 ## Code Quality Standards
 

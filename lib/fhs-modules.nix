@@ -110,11 +110,11 @@ let
       hasDefault = elem "default.nix" files;
 
       # 冲突检测: options.nix 和 default.nix 不能共存
-      _ =
-        if hasOptions && hasDefault then
-          throw "Conflict in ${toString path}: Cannot have both options.nix and default.nix. Choose one module type: guarded (options.nix only) or traditional (default.nix only)."
-        else
-          null;
+      # 使用 lib.assertMsg 提供精准的报错信息
+      conflictCheck = lib.assertMsg (!(hasOptions && hasDefault)) (
+        "Module conflict at ${toString path}: Cannot have both options.nix and default.nix. "
+        + "Choose one module type: guarded (options.nix only) or traditional (default.nix only)."
+      );
 
       # 收集 unguarded 配置文件 (仅对没有 default.nix 的 guarded 模块)
       unguardedFiles =
@@ -156,7 +156,8 @@ let
         };
       });
     in
-    {
+    # 强制冲突检测求值 (Nix 惰性求值需要显式使用)
+    builtins.seq conflictCheck {
       inherit
         modPath
         path
