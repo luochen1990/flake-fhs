@@ -104,9 +104,9 @@ let
       # We check that devShells evaluate and can produce their wrapper derivation
       (lib.mapAttrsToList getDrv devShells)
     ++ [
-      # Explicit check for devShells presence in std template
+      # Explicit check for devShells presence in long template
       (
-        if templateName == "std" && devShells == { } then
+        if templateName == "long" && devShells == { } then
           throw "Template ${templateName} should have devShells but found none"
         else
           pkgs.writeText "check-devShells-presence-${templateName}" "pass"

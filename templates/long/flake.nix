@@ -1,5 +1,5 @@
 {
-  description = "Standard template with full nixos-config";
+  description = "Long-naming template with full nixos-config";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

@@ -112,8 +112,8 @@ class TemplateValidator:
     def _check_nixos_modules(
         self, temp_dir: Path, template_name: str
     ) -> Optional[TestResult]:
-        """Check nixosModules contains expected nested modules (only for 'std' template)."""
-        if template_name != "std":
+        """Check nixosModules contains expected nested modules (only for 'long' template)."""
+        if template_name != "long":
             return None
 
         try:

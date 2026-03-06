@@ -11,13 +11,5 @@
     inputs@{ flake-fhs, ... }:
     flake-fhs.lib.mkFlake { inherit inputs; } {
       layout.roots = [ "/nix" ];
-      # systems = [
-      #   "x86_64-linux"
-      #   "x86_64-darwin"
-      #   "aarch64-linux"
-      # ];
-      # nixpkgs.config = {
-      #   allowUnfree = true;
-      # };
     };
 }

@@ -25,7 +25,7 @@ Just drop your files into the designated directories, and the corresponding Flak
 
 ```bash
 # Initialize a new project with the short-name template
-nix flake init --template github:luochen1990/flake-fhs#short
+nix flake init --template github:luochen1990/flake-fhs
 ```
 
 ## Documentation
