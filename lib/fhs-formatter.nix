@@ -27,7 +27,7 @@ in
         if (inputs ? treefmt-nix) && pathExists treefmtNix then
             (inputs.treefmt-nix.lib.evalModule pkgs treefmtNix).config.build.wrapper
         else if pathExists treefmtToml then
-          pkgs.treefmt.withConfig { configFile = treefmtToml; }
+          pkgs.treefmt
         else
           pkgs.nixfmt-tree
       );
