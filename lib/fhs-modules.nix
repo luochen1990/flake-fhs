@@ -664,22 +664,16 @@ let
       };
     in
     {
-      nixosModules = listToAttrs allModules // {
-        default = defaultModule;
-      };
-    };
-
-  # getAllModulesDefault :: [Path] -> String -> Module
-  # 获取所有模块的 default 模块 (用于 sharedModules)
-  getAllModulesDefault =
-    modulesDirs: suffix:
-    let
-      allOutputs = map (dir: mkModulesOutputSingle dir suffix) modulesDirs;
-      allModules = concatLists (map (o: o.modules) allOutputs);
-    in
-    {
-      key = "default";
-      imports = map (m: m.value) allModules;
+      nixosModules =
+        listToAttrs allModules
+        // (
+          if allModules == [ ] then
+            { }
+          else
+            {
+              default = defaultModule;
+            }
+        );
     };
 
 in
@@ -698,6 +692,5 @@ in
     wrapModule
     mkModulesOutputSingle
     mkModulesOutput
-    getAllModulesDefault
     ;
 }

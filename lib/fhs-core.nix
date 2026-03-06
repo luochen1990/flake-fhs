@@ -126,11 +126,23 @@ let
         ) roots
       );
 
+      # Collect all modules first to check if there are any
+      modulesOutput = flakeFhsLib.mkModulesOutput {
+        moduleDirs = moduleDirs;
+        suffix = layout.nixosModules.suffix;
+      };
+
       # Shared modules for both NixOS configurations and Colmena
+      # Only include modules if there are any
       sharedModules = [
-        (flakeFhsLib.getAllModulesDefault moduleDirs layout.nixosModules.suffix)
         hostnameModule
-      ];
+      ]
+      ++ (
+        if builtins.hasAttr "default" modulesOutput.nixosModules then
+          [ modulesOutput.nixosModules.default ]
+        else
+          [ ]
+      );
 
       # Inject hostname by default
       hostnameModule =
@@ -213,10 +225,7 @@ let
     // (flakeFhsLib.mkFormatterOutput args {
       inherit eachSystem;
     })
-    // (flakeFhsLib.mkModulesOutput {
-      moduleDirs = moduleDirs;
-      suffix = layout.nixosModules.suffix;
-    })
+    // modulesOutput
     // (flakeFhsLib.mkConfigurationsOutput args {
       inherit validHosts sharedModules mkSysContext;
     })
