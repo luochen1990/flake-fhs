@@ -35,7 +35,7 @@ in
     let
       # Load user-defined shells from directory
       userShells =
-        sysContext:
+        evalContext:
         listToAttrs (
           concatLists (
             exploreDir roots (it: rec {
@@ -52,7 +52,7 @@ in
                     if hasSuffix ".nix" fname then
                       {
                         name = removeSuffix ".nix" fname;
-                        value = import (it.path + "/${fname}") sysContext;
+                        value = import (it.path + "/${fname}") evalContext;
                       }
                     else
                       null
@@ -62,7 +62,7 @@ in
                   [
                     {
                       name = concatStringsSep "/" (tail it.breadcrumbs');
-                      value = import (it.path + "/default.nix") sysContext;
+                      value = import (it.path + "/default.nix") evalContext;
                     }
                   ]
                 else
@@ -76,14 +76,14 @@ in
     in
     {
       devShells = eachSystem (
-        sysContext:
+        evalContext:
         {
-          default = sysContext.pkgs.mkShell {
-            inputsFrom = allProjectDrvs sysContext;
-            packages = [ formatter.${sysContext.system} ];
+          default = evalContext.pkgs.mkShell {
+            inputsFrom = allProjectDrvs evalContext;
+            packages = [ formatter.${evalContext.system} ];
           };
         }
-        // userShells sysContext
+        // userShells evalContext
       );
     };
 }

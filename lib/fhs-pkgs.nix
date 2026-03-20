@@ -85,7 +85,7 @@ let
 
   # loadScopedOutputs :: Config -> Roots -> Subdirs -> SystemContext -> [ { name :: String; value :: Any; } ]
   loadScopedOutputs =
-    mkFlakeArgs: roots: subdirsList: sysContext:
+    mkFlakeArgs: roots: subdirsList: evalContext:
     concatMap (
       root:
       let
@@ -97,7 +97,7 @@ let
           if pathExists p then p else null
         );
       in
-      concatMap (pkgRoot: loadScopedTree sysContext sysContext.scope { } pkgRoot [ ]) validSubdirs
+      concatMap (pkgRoot: loadScopedTree evalContext evalContext.scope { } pkgRoot [ ]) validSubdirs
     ) roots;
 
 in

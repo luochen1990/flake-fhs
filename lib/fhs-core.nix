@@ -33,7 +33,7 @@ let
         nixpkgsConfig
         nixpkgsOverlays
         layout
-        systemContext
+        evalContext
         ;
 
       partOf = mapAttrs (
@@ -52,7 +52,7 @@ let
       );
 
       # system related context
-      mkSysContext =
+      mkEvalContext =
         systemInfo:
         let
           system = systemInfo.system or (lib.head supportedSystems);
@@ -74,7 +74,7 @@ let
             lib = mergedLib;
           };
           mergedLib = flakeFhsLib // preparedLib // lib; # TODO: configurable
-          userCtx = systemContext {
+          userCtx = evalContext {
             inherit
               system
               pkgs
@@ -114,9 +114,9 @@ let
         dict supportedSystems (
           system:
           let
-            sysContext = mkSysContext { inherit system; };
+            evalContext = mkEvalContext { inherit system; };
           in
-          outputBuilder sysContext
+          outputBuilder evalContext
         );
 
       # Discover module directories
@@ -184,9 +184,9 @@ let
       formatter = (flakeFhsLib.mkFormatterOutput args { inherit eachSystem; }).formatter;
 
       allProjectDrvs =
-        sysContext:
+        evalContext:
         let
-          load = subdir: map (i: i.value) (flakeFhsLib.loadScopedOutputs args roots subdir sysContext);
+          load = subdir: map (i: i.value) (flakeFhsLib.loadScopedOutputs args roots subdir evalContext);
         in
         load layout.packages.subdirs ++ load layout.apps.subdirs ++ load layout.checks.subdirs;
 
@@ -206,15 +206,15 @@ let
       # Generate all flake outputs
 
       packages = eachSystem (
-        sysContext:
-        listToAttrs (flakeFhsLib.loadScopedOutputs args roots layout.packages.subdirs sysContext)
+        evalContext:
+        listToAttrs (flakeFhsLib.loadScopedOutputs args roots layout.packages.subdirs evalContext)
       );
 
       apps = eachSystem (
-        sysContext:
+        evalContext:
         let
           inherit (flakeFhsLib) inferMainProgram;
-          rawApps = flakeFhsLib.loadScopedOutputs args roots layout.apps.subdirs sysContext;
+          rawApps = flakeFhsLib.loadScopedOutputs args roots layout.apps.subdirs evalContext;
         in
         listToAttrs (
           map (app: {
@@ -228,7 +228,7 @@ let
       );
 
       checks = eachSystem (
-        sysContext: listToAttrs (flakeFhsLib.loadScopedOutputs args roots layout.checks.subdirs sysContext)
+        evalContext: listToAttrs (flakeFhsLib.loadScopedOutputs args roots layout.checks.subdirs evalContext)
       );
 
       lib = flakeFhsLib.prepareLib {
@@ -239,14 +239,14 @@ let
       inherit formatter devShells;
     }
     // (flakeFhsLib.mkColmenaOutput args {
-      inherit validHosts sharedModules mkSysContext;
+      inherit validHosts sharedModules mkEvalContext;
     })
     // (flakeFhsLib.mkTemplatesOutput args {
       inherit roots;
     })
     // modulesOutput
     // (flakeFhsLib.mkConfigurationsOutput args {
-      inherit validHosts sharedModules mkSysContext;
+      inherit validHosts sharedModules mkEvalContext;
     });
 in
 {

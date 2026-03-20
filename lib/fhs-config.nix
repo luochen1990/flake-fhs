@@ -149,16 +149,16 @@ let
           description = "Extra flake outputs to merge with FHS outputs";
         };
 
-        systemContext = lib.mkOption {
-          description = "Context generator dependent on system";
+        evalContext = lib.mkOption {
+          description = "Context generator for evaluation environments (e.g., specific architecture or host)";
           default = _: { };
           type = lib.mkOptionType {
-            name = "systemContext";
-            description = "function system -> attrs";
+            name = "evalContext";
+            description = "function ({ system, pkgs, config, overlays }) -> attrs";
             check = lib.isFunction;
             merge =
-              loc: defs: system:
-              lib.foldl' (acc: def: lib.recursiveUpdate acc (def.value system)) { } defs;
+              loc: defs: ctx:
+              lib.foldl' (acc: def: lib.recursiveUpdate acc (def.value ctx)) { } defs;
           };
         };
       };

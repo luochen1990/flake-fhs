@@ -38,7 +38,7 @@ flakeFhsLib: {
         nixpkgsConfig = config.nixpkgs.config;
         nixpkgsOverlays = config.nixpkgs.overlays;
         layout = config.layout;
-        systemContext = config.systemContext;
+        evalContext = config.evalContext;
       };
     in
     lib.recursiveUpdate fhsFlake config.flake;

@@ -15,7 +15,7 @@ in
     {
       validHosts,
       sharedModules,
-      mkSysContext,
+      mkEvalContext,
     }:
     let
       inherit (args) lib;
@@ -25,7 +25,7 @@ in
         map (
           host:
           let
-            sysContext = mkSysContext host.info;
+            evalContext = mkEvalContext host.info;
             modules = sharedModules ++ [
               (host.path + "/configuration.nix")
             ];
@@ -33,15 +33,15 @@ in
           {
             name = host.name;
             value = lib.nixosSystem {
-              inherit (sysContext)
+              inherit (evalContext)
                 system
                 lib
                 ;
-              specialArgs = sysContext.specialArgs // {
+              specialArgs = evalContext.specialArgs // {
                 hostname = host.name;
               };
               modules = modules ++ [
-                { nixpkgs.pkgs = sysContext.pkgs; }
+                { nixpkgs.pkgs = evalContext.pkgs; }
               ];
             };
           }

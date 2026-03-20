@@ -17,7 +17,7 @@ in
     {
       validHosts,
       sharedModules,
-      mkSysContext,
+      mkEvalContext,
     }:
     let
       inherit (args)
@@ -45,22 +45,22 @@ in
         colmenaHive = inputs.colmena.lib.makeHive (
           {
             meta = {
-              nixpkgs = (mkSysContext { system = head supportedSystems; }).pkgs;
+              nixpkgs = (mkEvalContext { system = head supportedSystems; }).pkgs;
               nodeNixpkgs = listToAttrs (
                 map (host: {
                   name = host.name;
-                  value = (mkSysContext host.info).pkgs;
+                  value = (mkEvalContext host.info).pkgs;
                 }) validHosts
               );
               nodeSpecialArgs = listToAttrs (
                 map (
                   host:
                   let
-                    sysContext = mkSysContext host.info;
+                    evalContext = mkEvalContext host.info;
                   in
                   {
                     name = host.name;
-                    value = sysContext.specialArgs // {
+                    value = evalContext.specialArgs // {
                       hostname = host.name;
                     };
                   }
